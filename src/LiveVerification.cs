@@ -21,6 +21,7 @@ internal sealed class LiveVerification {
    var windows=app.NoteWindows.Values.ToList();Check("All notes visible",windows.All(w=>w.IsVisible));Check("Native windows absent from taskbar",windows.All(w=>!w.ShowInTaskbar&&(GetWindowLongPtr(new WindowInteropHelper(w).Handle,-20).ToInt64()&0x40000)==0));
    Check("Positions restored without collapsing into cascade",windows.Select(w=>(w.Left,w.Top)).Distinct().Count()==3);
    foreach(var w in windows)Check("Note inside monitor work area: "+w.Note.Title,NoteWindow.WorkArea(w).Contains(new Rect(w.Left,w.Top,w.Width,w.Height)));
+   Check("Trash aligns with all other bottom actions",windows.All(w=>w.BottomButtonsAligned()));var narrow=windows[0];double previousWidth=narrow.Width;narrow.Width=300;Check("Bottom actions fit and align at minimum note width",narrow.BottomButtonsAligned());narrow.Width=previousWidth;
    var moved=windows[0];var area=NoteWindow.WorkArea(moved);double x=area.Left+93,y=area.Top+117;moved.Left=x;moved.Top=y;moved.Save();moved.FitToScreen();Check("Free placement is not snapped or reset",Math.Abs(moved.Left-x)<1&&Math.Abs(moved.Top-y)<1);moved.Save();var restored=new Store(app.DataRoot).Book.Notes.Single(n=>n.Id==moved.Note.Id);Check("Moved position survives reload",Math.Abs(restored.Left-x)<1&&Math.Abs(restored.Top-y)<1);
    app.HideNotes();break;
   case 2:Check("Hide animation finishes and keeps process alive",app.NoteWindows.Values.All(w=>!w.IsVisible));app.HandleTrayClick();break;
