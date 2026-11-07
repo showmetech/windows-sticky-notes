@@ -20,7 +20,7 @@ public sealed class NotesApp:Application {
  public string DataRoot="";
  internal bool TrayVisible=>tray?.Visible==true;
  internal void HandleTrayClick()=>ShowNotes();
- public static string DefaultRoot=>Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bruno","WindowsStickyNotes");
+ public static string DefaultRoot=>Distribution.IsPackaged?Path.Combine(global::Windows.Storage.ApplicationData.Current.LocalFolder.Path,"notes"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bruno","WindowsStickyNotes");
  [STAThread] public static int Main(string[] args){var app=new NotesApp{ShutdownMode=ShutdownMode.OnExplicitShutdown};
   if(args.Contains("--self-test"))return SelfTests.Run(args);
   var arg=Array.IndexOf(args,"--data-dir");app.DataRoot=arg>=0&&arg+1<args.Length?Path.GetFullPath(args[arg+1]):DefaultRoot;
