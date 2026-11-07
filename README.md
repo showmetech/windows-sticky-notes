@@ -12,14 +12,14 @@ Notas adesivas para Windows 11, com a mesma linguagem dos widgets de áudio e ca
 
 - **Clique no ícone da bandeja:** traz as notas da área ativa para frente, nas posições salvas. Não cria botões na barra de tarefas.
 - **Botão direito na bandeja:** nova nota, mostrar/ocultar, notas e áreas, grade, configurações e sair.
-- **Arraste pelo nome da área**, no cabeçalho, para mover a nota. Arraste o canto inferior direito para redimensionar.
+- **Arraste pela faixa superior**, ao lado dos botões, para posicionar a nota livremente na área de trabalho. A posição continua salva ao reabrir. Arraste o canto inferior direito para redimensionar.
 - **Edite o título e escreva no corpo.** Ctrl+B e Ctrl+I formatam o texto; o botão de lista insere marcadores.
 - **Imagens:** cole com Ctrl+V, arraste um arquivo para o corpo ou use o botão de imagem. A imagem é incorporada à nota: o arquivo original pode ser movido depois. Imagens grandes são reduzidas para até 1.600 pixels de largura; arquivos de até 30 MB. Formatos dependem dos decodificadores presentes no Windows; PNG e JPEG são as opções mais seguras.
-- **Cor:** clique na amostra colorida para escolher a paleta ou uma cor personalizada. Cores automáticas evitam as já usadas pelas notas ativas, inclusive as escolhidas manualmente.
+- **Cor:** clique na amostra colorida e escolha **Suaves**, **Vivas** ou **Neon**, ou uma cor personalizada. Vivas e Neon preservam a saturação mesmo no tema escuro; o texto alterna automaticamente entre preto e branco para manter contraste. Cores automáticas evitam as já usadas pelas notas ativas, inclusive as escolhidas manualmente.
 - **Alfinete:** mantém a nota acima das outras janelas. Sem fixar, a nota continua aberta e pode ficar atrás dos seus aplicativos.
 - **X ou Esc:** oculta a nota; não a exclui. O clique na bandeja a traz de volta. Ctrl+Shift+H oculta todas.
 - **Áreas:** crie áreas em Configurações e selecione a área ativa em Notas e áreas. No menu da nota, escolha “Mover para outra área”. São grupos próprios do app, não áreas de trabalho virtuais do Windows.
-- **Lixeira:** o menu “Mais opções” move uma nota para a lixeira; restaure pelo painel. Esta versão não faz exclusão definitiva nem esvazia a lixeira automaticamente.
+- **Lixeira:** use o botão no canto inferior direito da nota ou o menu “Mais opções”. Ambos pedem confirmação; Cancelar é a ação padrão. A nota só é movida após confirmar “Excluir nota” e pode ser restaurada pelo painel. Esta versão não faz exclusão definitiva nem esvazia a lixeira automaticamente.
 
 ## Instalação e dados
 
