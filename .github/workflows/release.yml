@@ -1,0 +1,136 @@
+name: Build, test and publish
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build x64 and ARM64 and test isolated data
+        run: python scripts/release.py build
+      - name: Restore official Microsoft packaging tools
+        run: dotnet restore tools/Packaging/Packaging.csproj
+      - name: Validate both MSIX packages with a separate test-only identity
+        run: python scripts/release.py msix-test
+      - name: Build official Store bundle when configured
+        if: vars.STORE_IDENTITY_NAME != ''
+        env:
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+          STORE_PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
+        run: python scripts/release.py msix
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-release
+          path: artifacts/*
+          if-no-files-found: error
+  arm64-runtime:
+    needs: build
+    runs-on: windows-11-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: downloaded
+      - name: Run the ARM64 release binary on native Windows ARM64
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'Arm64') { throw 'Native ARM64 Windows required' }
+          $archive = @(Get-ChildItem downloaded -Recurse -Filter '*-arm64.zip')
+          if ($archive.Count -ne 1) { throw 'Exactly one ARM64 artifact required' }
+          Expand-Archive -LiteralPath $archive[0].FullName -DestinationPath expanded
+          $report = Join-Path $PWD 'arm64-self-tests.json'
+          $process = Start-Process -FilePath "$PWD/expanded/app/WindowsStickyNotes.exe" -ArgumentList @('--self-test','--report',('"'+$report+'"')) -WindowStyle Hidden -PassThru
+          if (!$process.WaitForExit(120000)) { $process.Kill(); throw 'Isolated ARM64 test timed out' }
+          if ($process.ExitCode -ne 0) { throw 'ARM64 regression process failed' }
+          $result = Get-Content -Raw $report | ConvertFrom-Json
+          if ($result.failed -ne 0 -or $result.processArchitecture -ne 'Arm64') { throw 'Native ARM64 regression tests failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arm64-runtime-verification
+          path: arm64-self-tests.json
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, arm64-runtime]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: downloaded
+      - name: Publish immutable release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content src/WindowsStickyNotes.csproj
+          $version = $project.Project.PropertyGroup.Version | Where-Object { $_ }
+          if ($env:TAG -ne "v$version") { throw 'Tag and project version differ' }
+          $files = @(Get-ChildItem downloaded -Recurse -File | Where-Object { $_.Extension -in '.zip','.msixbundle','.msixupload' -or $_.Name -eq 'SHA256.txt' } | ForEach-Object FullName)
+          gh release create $env:TAG @files --verify-tag --title "Windows Sticky Notes $version" --notes-file docs/release-notes.md
+          if ($LASTEXITCODE) { throw 'Release failed; existing release assets are never replaced silently' }
+  store:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: github-release
+    runs-on: windows-latest
+    environment: microsoft-store
+    steps:
+      - name: Require completed first publication and official Store identity
+        env:
+          STORE_FIRST_PUBLICATION_COMPLETE: ${{ vars.STORE_FIRST_PUBLICATION_COMPLETE }}
+          STORE_PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+          CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+        shell: pwsh
+        run: |
+          if ($env:STORE_FIRST_PUBLICATION_COMPLETE -ne 'true') { throw 'The first Store publication is not complete. This is NOT a Store release.' }
+          foreach ($key in 'STORE_PRODUCT_ID','TENANT_ID','SELLER_ID','CLIENT_ID','CLIENT_SECRET') {
+            if (![Environment]::GetEnvironmentVariable($key)) { throw "Store configuration missing: $key" }
+          }
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: downloaded
+      - uses: microsoft/microsoft-store-apppublisher@v1.1
+      - name: Submit the exact tested package and wait for Store response
+        env:
+          STORE_PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
+          TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+          CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+        shell: pwsh
+        run: |
+          $package = @(Get-ChildItem downloaded -Recurse -Filter '*.msixupload')
+          if ($package.Count -ne 1) { throw 'One official Store upload bundle is required' }
+          msstore reconfigure --tenantId $env:TENANT_ID --sellerId $env:SELLER_ID --clientId $env:CLIENT_ID --clientSecret $env:CLIENT_SECRET
+          if ($LASTEXITCODE) { throw 'Store authentication failed' }
+          msstore publish $package[0].DirectoryName -i $package[0].FullName -id $env:STORE_PRODUCT_ID
+          if ($LASTEXITCODE) { throw 'Store submission failed' }
+          'Submitted to Microsoft. Public Store publication must be checked before desktop promotion.' >> $env:GITHUB_STEP_SUMMARY

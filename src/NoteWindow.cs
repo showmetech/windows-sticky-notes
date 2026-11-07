@@ -1,0 +1,73 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using Microsoft.Win32;
+using Forms=System.Windows.Forms;
+
+namespace StickyNotes;
+public sealed class NoteWindow:Window {
+ public readonly Note Note;
+ public readonly RichTextBox Editor=new();
+ public readonly TextBox TitleBox;
+ readonly NotesApp app;readonly Border surface;readonly TextBlock status=new(){FontSize=10,Opacity=.65};
+ readonly DispatcherTimer saveTimer=new(){Interval=TimeSpan.FromMilliseconds(500)};
+ readonly Button pin;readonly Button areaButton;readonly Button colorButton;bool ready,dirty,disposed,placing;int visibilityGeneration;
+ public NoteWindow(NotesApp app,Note note){this.app=app;Note=note;Visuals.Base(this,note.Width,note.Height);MinWidth=300;MinHeight=260;Title="Sticky Notes — "+note.Title;Topmost=note.Pinned;
+  ShowInTaskbar=Environment.GetCommandLineArgs().Contains("--inspect");if(double.IsFinite(note.Left))Left=note.Left;if(double.IsFinite(note.Top))Top=note.Top;
+  var dark=Visuals.Dark(app.Store.Book.Theme);surface=Visuals.Surface(this,dark);surface.Padding=new Thickness(16,10,16,10);
+  var layout=new Grid();foreach(var h in new[]{GridLength.Auto,GridLength.Auto,new GridLength(1,GridUnitType.Star),GridLength.Auto,GridLength.Auto})layout.RowDefinitions.Add(new(){Height=h});surface.Child=layout;
+  var head=new Grid{Height=38};head.ColumnDefinitions.Add(new());head.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
+  areaButton=new Button{Content="⠿  "+note.Area,Background=Brushes.Transparent,BorderThickness=new Thickness(0),HorizontalAlignment=HorizontalAlignment.Left,Foreground=Foreground,Padding=new Thickness(0),FontSize=11,ToolTip="Arraste para mover • botão direito para trocar de área"};System.Windows.Automation.AutomationProperties.SetName(areaButton,"Mover nota");
+  areaButton.PreviewMouseLeftButtonDown+=(_,e)=>{if(e.ButtonState==MouseButtonState.Pressed){DragMove();CapturePosition();e.Handled=true;}};areaButton.PreviewMouseRightButtonUp+=(_,e)=>{OpenAreas();e.Handled=true;};head.Children.Add(areaButton);
+  var actions=new StackPanel{Orientation=Orientation.Horizontal};actions.Children.Add(Visuals.Icon("\uE710","Nova nota",()=>app.NewNote()));pin=Visuals.Icon("\uE718","Fixar acima das janelas",()=>{Note.Pinned=!Note.Pinned;Topmost=Note.Pinned;ApplyColor();MarkDirty();});actions.Children.Add(pin);actions.Children.Add(Visuals.Icon("\uE8BB","Ocultar esta nota",Conceal));Grid.SetColumn(actions,1);head.Children.Add(actions);layout.Children.Add(head);
+  TitleBox=Visuals.Input("Título da nota",note.Title);TitleBox.FontSize=21;TitleBox.FontWeight=FontWeights.SemiBold;TitleBox.Margin=new Thickness(0,8,0,10);TitleBox.Foreground=Foreground;TitleBox.MaxLength=180;TitleBox.TextChanged+=(_,_)=>{Note.Title=TitleBox.Text;Title="Sticky Notes — "+Note.Title;MarkDirty();};Grid.SetRow(TitleBox,1);layout.Children.Add(TitleBox);
+  Editor.Document=new FlowDocument{PagePadding=new Thickness(0),FontFamily=FontFamily,FontSize=15,LineHeight=23};Editor.Background=Brushes.Transparent;Editor.Foreground=Foreground;Editor.BorderThickness=new Thickness(0);Editor.Padding=new Thickness(0);Editor.VerticalScrollBarVisibility=ScrollBarVisibility.Auto;Editor.HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled;Editor.AcceptsTab=true;Editor.IsDocumentEnabled=true;Editor.SelectionBrush=Visuals.Brush("#777C83FF");System.Windows.Automation.AutomationProperties.SetName(Editor,"Conteúdo da nota");
+  try{app.Store.LoadDocument(note,Editor.Document);}catch(Exception e){throw new InvalidDataException("Não foi possível ler a nota “"+note.Title+"”. O arquivo será preservado.",e);}
+  Editor.TextChanged+=(_,_)=>MarkDirty();DataObject.AddPastingHandler(Editor,OnPaste);Editor.PreviewDragOver+=(_,e)=>{if(e.Data.GetDataPresent(DataFormats.FileDrop)){e.Effects=DragDropEffects.Copy;e.Handled=true;}};Editor.PreviewDrop+=(_,e)=>{if(e.Data.GetData(DataFormats.FileDrop) is string[] paths){foreach(var p in paths)AddImageFile(p);e.Handled=true;}};Editor.AllowDrop=true;Grid.SetRow(Editor,2);layout.Children.Add(Editor);
+  var tools=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,10,0,8)};
+  colorButton=Visuals.Icon("\uE790","Cor da nota",OpenPalette);tools.Children.Add(colorButton);tools.Children.Add(Visuals.Icon("\uE91B","Adicionar imagem",PickImage));
+  tools.Children.Add(Visuals.Icon("\uE8DD","Negrito (Ctrl+B)",()=>{Editor.Focus();EditingCommands.ToggleBold.Execute(null,Editor);}));
+  tools.Children.Add(Visuals.Icon("\uE8DB","Itálico (Ctrl+I)",()=>{Editor.Focus();EditingCommands.ToggleItalic.Execute(null,Editor);}));
+  tools.Children.Add(Visuals.Icon("\uE8FD","Lista com marcadores",()=>{Editor.Focus();EditingCommands.ToggleBullets.Execute(null,Editor);}));
+  tools.Children.Add(Visuals.Icon("\uE8F1","Todas as notas",()=>app.ShowLibrary()));
+  var more=Visuals.Icon("\uE712","Mais opções",OpenMore);tools.Children.Add(more);Grid.SetRow(tools,3);layout.Children.Add(tools);
+  var footer=new Grid();footer.ColumnDefinitions.Add(new());footer.ColumnDefinitions.Add(new(){Width=GridLength.Auto});status.Text="Salvo neste computador";footer.Children.Add(status);var resize=new Thumb{Width=16,Height=16,Cursor=Cursors.SizeNWSE,Opacity=.45,Background=Brushes.Transparent,Template=(ControlTemplate)System.Windows.Markup.XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='Thumb'><TextBlock Text='◢' FontSize='13'/></ControlTemplate>")};resize.DragDelta+=(_,e)=>{var work=WorkArea(this);Width=Math.Clamp(Width+e.HorizontalChange,Math.Min(MinWidth,work.Width),work.Width);Height=Math.Clamp(Height+e.VerticalChange,Math.Min(MinHeight,work.Height),work.Height);CapturePosition();};resize.DragCompleted+=(_,_)=>Save();Grid.SetColumn(resize,1);footer.Children.Add(resize);Grid.SetRow(footer,4);layout.Children.Add(footer);
+  saveTimer.Tick+=(_,_)=>Save();LocationChanged+=(_,_)=>{if(ready)CapturePosition();};SizeChanged+=(_,_)=>{if(ready)CapturePosition();};
+  PreviewKeyDown+=(_,e)=>{if(e.Key==Key.Escape){Conceal();e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.N){app.NewNote();e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.S){Save();e.Handled=true;}else if(Keyboard.Modifiers==(ModifierKeys.Control|ModifierKeys.Shift)&&e.Key==Key.H){app.HideNotes();e.Handled=true;}};
+  Closing+=(_,e)=>{if(!app.Exiting){e.Cancel=true;Conceal();}};Closed+=(_,_)=>{disposed=true;saveTimer.Stop();};
+  SourceInitialized+=(_,_)=>FitToScreen();DpiChanged+=(_,_)=>Dispatcher.BeginInvoke(FitToScreen);Deactivated+=(_,_)=>Save();ApplyColor();ready=true;
+ }
+ public static Rect WorkArea(Window w){var hwnd=new WindowInteropHelper(w).Handle;var a=Forms.Screen.FromHandle(hwnd).WorkingArea;var source=PresentationSource.FromVisual(w);var m=source?.CompositionTarget?.TransformFromDevice??Matrix.Identity;var p=m.Transform(new Point(a.Left,a.Top));var size=m.Transform(new Vector(a.Width,a.Height));return new Rect(p.X,p.Y,size.X,size.Y);}
+ public void FitToScreen(){if(placing)return;placing=true;double savedLeft=Note.Left,savedTop=Note.Top,savedWidth=Note.Width,savedHeight=Note.Height;try{var handle=new WindowInteropHelper(this).Handle;var screen=Forms.Screen.FromHandle(handle);
+  var source=HwndSource.FromHwnd(handle);var transform=source?.CompositionTarget?.TransformFromDevice??Matrix.Identity;var a=screen.WorkingArea;var p=transform.Transform(new Point(a.Left,a.Top));var sz=transform.Transform(new Vector(a.Width,a.Height));var r=new Rect(p.X,p.Y,sz.X,sz.Y);
+  MinWidth=Math.Min(300,r.Width);MinHeight=Math.Min(260,r.Height);Width=Math.Clamp(savedWidth,MinWidth,r.Width);Height=Math.Clamp(savedHeight,MinHeight,r.Height);
+  Left=Math.Clamp(double.IsFinite(savedLeft)?savedLeft:r.Right-Width-16,r.Left,r.Right-Width);Top=Math.Clamp(double.IsFinite(savedTop)?savedTop:r.Top+32,r.Top,r.Bottom-Height);
+ }finally{placing=false;}CapturePosition();
+ }
+ public void Present(){if(disposed)return;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
+ public void Conceal(){if(!Save())return;int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
+ public void MarkDirty(){if(!ready)return;dirty=true;status.Text="Salvando…";saveTimer.Stop();saveTimer.Start();}
+ void CapturePosition(){if(!ready||placing)return;Note.Left=Left;Note.Top=Top;Note.Width=Width;Note.Height=Height;foreach(var block in Editor.Document.Blocks.OfType<BlockUIContainer>())if(block.Child is Image image&&image.Source is BitmapSource bitmap)image.Width=Math.Min(Math.Max(80,Width-64),bitmap.PixelWidth);MarkDirty();}
+ public bool Save(){saveTimer.Stop();if(!ready||!dirty)return true;try{app.Store.SaveDocument(Note,Editor.Document);dirty=false;status.Text="Salvo neste computador";return true;}catch(Exception e){status.Text="Não foi possível salvar • Ctrl+S para tentar";status.ToolTip=e.Message;return false;}}
+ public void ApplyColor(){bool dark=Visuals.Dark(app.Store.Book.Theme);var color=(Color)ColorConverter.ConvertFromString(Note.Color);if(SystemParameters.HighContrast){surface.Background=SystemColors.WindowBrush;Foreground=SystemColors.WindowTextBrush;}else{Color tint=dark?Color.FromRgb((byte)(24+color.R*.13),(byte)(26+color.G*.13),(byte)(29+color.B*.13)):Color.FromRgb((byte)(color.R*.38+255*.62),(byte)(color.G*.38+255*.62),(byte)(color.B*.38+255*.62));surface.Background=new SolidColorBrush(tint);surface.BorderBrush=new SolidColorBrush(Color.FromArgb(170,color.R,color.G,color.B));Foreground=Visuals.Brush(dark?"#F4F3F7":"#29272F");}Editor.Foreground=Foreground;TitleBox.Foreground=Foreground;areaButton.Foreground=Foreground;pin.Background=Note.Pinned?new SolidColorBrush(Color.FromArgb(90,color.R,color.G,color.B)):Brushes.Transparent;
+  colorButton.Content=new System.Windows.Shapes.Ellipse{Width=15,Height=15,Fill=new SolidColorBrush(color),Stroke=Visuals.Brush("#70505050"),StrokeThickness=1};new TextRange(Editor.Document.ContentStart,Editor.Document.ContentEnd).ApplyPropertyValue(TextElement.ForegroundProperty,Foreground);foreach(var b in Descendants<Button>(surface))b.Foreground=Foreground;
+ }
+ static System.Collections.Generic.IEnumerable<T> Descendants<T>(DependencyObject p) where T:DependencyObject{for(int i=0;i<VisualTreeHelper.GetChildrenCount(p);i++){var c=VisualTreeHelper.GetChild(p,i);if(c is T t)yield return t;foreach(var d in Descendants<T>(c))yield return d;}}
+ void OpenPalette(){var panel=new WrapPanel{Width=208,Margin=new Thickness(10)};var popup=new Popup{Child=new Border{Background=Visuals.Brush(Visuals.Dark(app.Store.Book.Theme)?"#292B32":"#FFFFFF"),CornerRadius=new CornerRadius(8),BorderThickness=new Thickness(1),BorderBrush=Visuals.Brush("#808080"),Child=panel},PlacementTarget=colorButton,Placement=PlacementMode.Top,StaysOpen=false,AllowsTransparency=true};foreach(var hex in Store.Palette){var swatch=new Button{Background=Visuals.Brush(hex),Width=40,Height=36,Margin=new Thickness(5),ToolTip=hex,Content=Note.Color==hex?"✓":"",Foreground=Brushes.Black};swatch.Click+=(_,_)=>{Note.Color=hex;ApplyColor();MarkDirty();popup.IsOpen=false;};System.Windows.Automation.AutomationProperties.SetName(swatch,"Cor "+hex);panel.Children.Add(swatch);}var custom=Visuals.TextButton("Outra cor…",()=>{popup.IsOpen=false;using var d=new Forms.ColorDialog{FullOpen=true,Color=System.Drawing.ColorTranslator.FromHtml(Note.Color)};if(d.ShowDialog(new NativeOwner(this))==Forms.DialogResult.OK){Note.Color=$"#{d.Color.R:X2}{d.Color.G:X2}{d.Color.B:X2}";ApplyColor();MarkDirty();}});panel.Children.Add(custom);popup.IsOpen=true;}
+ void OpenAreas(){var menu=new ContextMenu();foreach(var area in app.Store.Book.Areas){var item=new MenuItem{Header=area,IsCheckable=true,IsChecked=Note.Area==area};item.Click+=(_,_)=>{Note.Area=area;areaButton.Content="⠿  "+area;MarkDirty();Save();if(area!=app.Store.Book.ActiveArea)Hide();};menu.Items.Add(item);}menu.IsOpen=true;}
+ void OpenMore(){var menu=new ContextMenu();void Add(string name,Action action){var m=new MenuItem{Header=name};m.Click+=(_,_)=>action();menu.Items.Add(m);}Add("Mover para outra área",OpenAreas);Add("Organizar notas em grade",app.Arrange);Add("Configurações",()=>app.ShowLibrary(true));menu.Items.Add(new Separator());Add("Mover para a lixeira",()=>{if(!Save())return;Note.Deleted=true;app.Store.Save();Hide();});menu.IsOpen=true;}
+ void PickImage(){var d=new OpenFileDialog{Title="Adicionar imagem à nota",Filter="Imagens|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif;*.tif;*.tiff",Multiselect=true};if(d.ShowDialog(this)==true)foreach(var path in d.FileNames)AddImageFile(path);}
+ void OnPaste(object sender,DataObjectPastingEventArgs e){if(e.DataObject.GetDataPresent(DataFormats.Bitmap)&&e.DataObject.GetData(DataFormats.Bitmap) is BitmapSource bitmap){e.CancelCommand();InsertImage(bitmap);}else if(e.DataObject.GetDataPresent(DataFormats.FileDrop)&&e.DataObject.GetData(DataFormats.FileDrop) is string[] paths){e.CancelCommand();foreach(var p in paths)AddImageFile(p);}}
+ public void AddImageFile(string path){try{var file=new FileInfo(path);if(file.Length>30*1024*1024)throw new InvalidDataException("Use uma imagem de até 30 MB.");var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;image.DecodePixelWidth=1600;image.UriSource=new Uri(path,UriKind.Absolute);image.EndInit();image.Freeze();InsertImage(image);}catch(Exception e){Visuals.Error("Não foi possível adicionar a imagem. "+e.Message);}}
+ public void InsertImage(BitmapSource bitmap){var image=new Image{Source=bitmap,Width=Math.Min(Math.Max(140,Width-64),bitmap.PixelWidth),Stretch=Stretch.Uniform,Margin=new Thickness(0,8,0,8),ToolTip="Imagem da nota"};var block=new BlockUIContainer(image);var paragraph=Editor.CaretPosition.Paragraph;if(paragraph!=null)Editor.Document.Blocks.InsertAfter(paragraph,block);else Editor.Document.Blocks.Add(block);var after=new Paragraph();Editor.Document.Blocks.InsertAfter(block,after);Editor.CaretPosition=after.ContentStart;MarkDirty();}
+ sealed class NativeOwner:Forms.IWin32Window{public IntPtr Handle{get;}public NativeOwner(Window w)=>Handle=new WindowInteropHelper(w).Handle;}
+}

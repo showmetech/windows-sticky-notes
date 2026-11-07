@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.artifacts/
+artifacts/
+app/
+verification/
+store/identity.json
+store/status.local.json
+*.pfx
+*.p12
+*.dpapi
+*.note
+*.bak
+*.log
+notebook.json
+*.user
+__pycache__/
