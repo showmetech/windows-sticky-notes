@@ -6,7 +6,7 @@ O pedido de Bruno é atendido por uma fonte canônica e um fluxo de release. Alt
 
 1. Atualizar a versão em `src/WindowsStickyNotes.csproj` e testar em dados isolados.
 2. Publicar o commit na `main`. O workflow compila x64/ARM64, roda regressões x64, valida dois MSIX e executa o binário ARM64 em um runner Windows ARM64 nativo.
-3. Após CI aprovado, criar a tag `vX.Y.Z` apontando exatamente para esse commit. O workflow cria a release no GitHub com ZIPs e checksums.
+3. Após CI aprovado, criar a tag `vX.Y.Z` apontando exatamente para esse commit, ou executar “Run workflow” com `release=true` na interface do GitHub. O workflow cria a tag/release para o mesmo SHA testado, com ZIPs e checksums. Não sobrescreve uma release existente.
 4. O job Store só submete atualizações de um produto já publicado. Ausência de cadastro, identidade, primeira publicação ou credenciais é uma falha explícita; não uma publicação bem-sucedida. A aprovação e a disponibilização dependem da Microsoft.
 5. Conferir a versão pública no Partner Center/Store. Anexar à mesma release um `store-receipt.json` com `status: published`, `version`, `sourceCommit`, `productId`, `storeUrl` e data real da conferência. Não marcar submissão pendente como publicada.
 6. `python scripts/release.py deploy --tag vX.Y.Z` baixa esse recibo e o ZIP correspondente, verifica SHA-256 e instala o artefato publicado. Sem recibo publicado, não atualiza o desktop.
