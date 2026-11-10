@@ -8,11 +8,19 @@
 
 ![Seletor com 50 cores em cinco paletas](docs/images/palette-50.png)
 
-Notas adesivas para Windows 11, com a mesma linguagem dos widgets de áudio e calendário: Segoe UI Variable, controles Fluent, cantos arredondados e transições curtas que respeitam a configuração de animações do Windows.
+Notas adesivas para Windows 11, com a mesma base visual dos widgets de áudio e calendário: Segoe UI Variable, tema Fluent, cabeçalho de 64 px, ações de 32 px, cantos de 8 px, materiais translúcidos e animação de abertura/recolhimento de 240 ms que respeita as preferências do Windows.
+
+## Widget e configurações da suíte · 1.3.0
+
+O widget de 360 px reúne áreas, busca, notas e lixeira. As configurações abrem em uma janela da mesma largura, acoplada acima do widget com intervalo de 12 px. A altura se adapta ao monitor. Aparência e inicialização, áreas, dados/backup e atalhos ficam em grupos expansíveis, com navegação por teclado e botão de rolagem no rodapé.
+
+O alfinete do widget o mantém aberto; o alfinete de cada nota continua independente. Sem fixar, o widget recolhe ao mudar para outro app, após 20 segundos sem interação, ou ao abrir outro widget compatível da suíte. Esse recolhimento não oculta nem exclui as notas da mesa. Enquanto configurações ou o menu estão em uso, o widget permanece aberto. Esc recolhe a janela atual e Ctrl+, abre configurações. Há acesso direto às configurações na faixa superior de cada nota.
+
+A bandeja usa a integração nativa do Windows, com ícone próprio, ativação por mouse/teclado e recriação do ícone após reinício do Explorer. O aplicativo não cria janela principal na barra de tarefas. `--settings` abre as configurações; `--startup` inicia apenas a bandeja.
 
 ## Usar
 
-- **Clique no ícone da bandeja:** traz as notas da área ativa para frente, nas posições salvas. Não cria botões na barra de tarefas.
+- **Clique no ícone da bandeja:** traz as notas da área ativa para frente, nas posições salvas, e abre/recolhe o widget. Não cria botões na barra de tarefas.
 - **Botão direito na bandeja:** nova nota, mostrar/ocultar, notas e áreas, grade, configurações e sair.
 - **Arraste pela faixa superior**, ao lado dos botões, para posicionar a nota livremente na área de trabalho. A posição continua salva ao reabrir. Arraste o canto inferior direito para redimensionar.
 - **Edite o título e escreva no corpo.** Ctrl+B e Ctrl+I formatam o texto; o botão de lista insere marcadores.

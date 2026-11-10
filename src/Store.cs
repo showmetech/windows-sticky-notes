@@ -25,6 +25,7 @@ public sealed class Note {
 public sealed class Notebook {
  public int Schema {get;set;}=1;
  public string Theme {get;set;}="Sistema";
+ public bool WidgetPinned {get;set;}
  public string ActiveArea {get;set;}="Minha mesa";
  public int ColorSequence {get;set;}
  public List<string> Areas {get;set;}=new(){"Minha mesa"};
