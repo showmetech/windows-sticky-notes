@@ -1,4 +1,12 @@
-# Windows Sticky Notes 1.3.1
+# Windows Sticky Notes 1.3.2
+
+- Notas com quatro ações visíveis no topo: configurações, nova nota, fixar e minimizar/ocultar. O símbolo de minimizar substitui o X, sem excluir a nota nem criar janela na barra de tarefas.
+- Base com exatamente seis ações alinhadas: cor, imagem, negrito, itálico, lista com marcadores e lixeira com confirmação.
+- Removidos o menu de três pontos, o menu da faixa superior e os textos passivos da nota. Falhas de salvamento continuam visíveis.
+- Redimensionamento nas quatro laterais e nos quatro cantos, com cursor correspondente ao passar o mouse. A borda oposta permanece fixa, os tamanhos mínimos são respeitados e a nova geometria é salva.
+- Troca de área disponível nos cartões do widget quando há mais de uma área; notas, conteúdo, imagens, cores e posições preservados.
+
+## Versão 1.3.1
 
 - Novo ícone Fluent com três notas adesivas: amarela, azul e rosa, com gradientes, profundidade e fundo transparente.
 - Ícone atualizado no executável, bandeja, atalhos e assets de empacotamento da Store. ICO com nove tamanhos de 16 a 256 px.

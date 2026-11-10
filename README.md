@@ -22,14 +22,14 @@ A bandeja usa a integração nativa do Windows, com ícone próprio, ativação 
 
 - **Clique no ícone da bandeja:** traz as notas da área ativa para frente, nas posições salvas, e abre/recolhe o widget. Não cria botões na barra de tarefas.
 - **Botão direito na bandeja:** nova nota, mostrar/ocultar, notas e áreas, grade, configurações e sair.
-- **Arraste pela faixa superior**, ao lado dos botões, para posicionar a nota livremente na área de trabalho. A posição continua salva ao reabrir. Arraste o canto inferior direito para redimensionar.
+- **Arraste pela faixa superior**, ao lado dos botões, para posicionar a nota livremente na área de trabalho. Para redimensionar, passe o mouse por qualquer lateral ou canto e arraste quando aparecer o cursor de ajuste. Laterais alteram um eixo; cantos ajustam largura e altura. Posição e tamanho continuam salvos ao reabrir.
 - **Edite o título e escreva no corpo.** Ctrl+B e Ctrl+I formatam o texto; o botão de lista insere marcadores.
 - **Imagens:** cole com Ctrl+V, arraste um arquivo para o corpo ou use o botão de imagem. A imagem é incorporada à nota: o arquivo original pode ser movido depois. Imagens grandes são reduzidas para até 1.600 pixels de largura; arquivos de até 30 MB. Formatos dependem dos decodificadores presentes no Windows; PNG e JPEG são as opções mais seguras.
 - **Cor:** clique na amostra colorida e escolha entre **50 cores**, organizadas em cinco linhas de dez: **Normal**, **Pastel**, **Vivas**, **Neon** e **Terrosas**, ou uma cor personalizada. Vivas e Neon preservam a saturação mesmo no tema escuro; o texto alterna automaticamente entre preto e branco para manter contraste. Cores automáticas evitam as já usadas pelas notas ativas, inclusive as escolhidas manualmente.
 - **Alfinete:** mantém a nota acima das outras janelas. Sem fixar, a nota continua aberta e pode ficar atrás dos seus aplicativos.
-- **X ou Esc:** oculta a nota; não a exclui. O clique na bandeja a traz de volta. Ctrl+Shift+H oculta todas.
-- **Áreas:** crie áreas em Configurações e selecione a área ativa em Notas e áreas. No menu da nota, escolha “Mover para outra área”. São grupos próprios do app, não áreas de trabalho virtuais do Windows.
-- **Lixeira:** use o botão à direita da barra inferior, alinhado com os demais controles ou o menu “Mais opções”. Ambos pedem confirmação; Cancelar é a ação padrão. A nota só é movida após confirmar “Excluir nota” e pode ser restaurada pelo painel. Esta versão não faz exclusão definitiva nem esvazia a lixeira automaticamente.
+- **Minimizar (traço) ou Esc:** oculta a nota; não a exclui. O clique na bandeja a traz de volta. Ctrl+Shift+H oculta todas. O topo mostra configurações, nova nota, fixar e minimizar; a base mostra cor, imagem, negrito, itálico, lista e lixeira. Não há menu de três pontos, nome da área ou legenda de salvamento na nota. Um aviso aparece somente se não for possível salvar.
+- **Áreas:** crie áreas em Configurações e selecione a área ativa no widget. Quando há mais de uma área, o cartão da nota no widget permite escolher sua área de destino. São grupos próprios do app, não áreas de trabalho virtuais do Windows.
+- **Lixeira:** use o botão à direita da barra inferior, alinhado com os demais controles. A exclusão pede confirmação; Cancelar é a ação padrão. A nota só é movida após confirmar “Excluir nota” e pode ser restaurada pelo widget. Esta versão não faz exclusão definitiva nem esvazia a lixeira automaticamente.
 
 ## Instalação e dados
 
