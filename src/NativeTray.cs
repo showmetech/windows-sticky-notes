@@ -12,7 +12,8 @@ internal sealed class NativeTray:IDisposable {
  readonly Guid id=new("c2f81dae-61aa-46ce-a2a8-2dc643296760");
  IntPtr icon;string iconPath;
  bool modern,disposed;
- public NativeTray(HwndSource source,string iconFile,Action toggle,Action context){
+ public NativeTray(HwndSource source,string iconFile,Action toggle,Action context,Guid? identity=null){
+  if(identity.HasValue)id=identity.Value;
   this.source=source;this.toggle=toggle;this.context=context;iconPath=iconFile;
   taskbarCreated=RegisterWindowMessage("TaskbarCreated");
   icon=LoadImage(IntPtr.Zero,iconFile,1,GetSystemMetrics(49),GetSystemMetrics(50),0x10);
