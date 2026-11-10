@@ -33,7 +33,7 @@ A bandeja usa a integração nativa do Windows, com ícone próprio, ativação 
 
 ## Instalação e dados
 
-O aplicativo é instalado por usuário, sem administrador, em `%LOCALAPPDATA%\Programs\WindowsStickyNotes`. A inicialização automática abre apenas a bandeja. É possível desativá-la nas configurações. Há um atalho no menu Iniciar e nenhuma criação de atalho na área de trabalho.
+O aplicativo é instalado por usuário, sem administrador, em `%LOCALAPPDATA%\Programs\WindowsStickyNotes`. A inicialização automática abre apenas a bandeja. É possível desativá-la nas configurações. Há um atalho no menu Iniciar; use `Install.ps1 -DesktopShortcut` para criar também um atalho na área de trabalho. Um atalho do próprio app já existente é atualizado. O ícone Fluent tem três notas coloridas e usa um arquivo versionado nos atalhos para evitar cache antigo.
 
 Escolha o pacote x64 para Intel/AMD ou ARM64 para Windows em ARM. Pacote portátil: extraia o ZIP inteiro e abra `app\WindowsStickyNotes.exe`. Para instalar, execute `Install.ps1` com PowerShell. Não é necessário instalar o .NET: o runtime da arquitetura escolhida acompanha o executável. O pacote portátil não tem assinatura digital. A publicação na Microsoft Store depende de cadastro aprovado, identidade oficial e certificação; consulte o estado da release, sem presumir que já está disponível na loja.
 

@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.3.0
+# Windows Sticky Notes 1.3.1
+
+- Novo ícone Fluent com três notas adesivas: amarela, azul e rosa, com gradientes, profundidade e fundo transparente.
+- Ícone atualizado no executável, bandeja, atalhos e assets de empacotamento da Store. ICO com nove tamanhos de 16 a 256 px.
+- Atalhos usam um caminho de ícone versionado para evitar a imagem antiga no cache do Explorer. Instalação oferece `-DesktopShortcut` e mantém atualizado um atalho já existente do próprio app.
+
+## Versão 1.3.0
 
 - Widget compacto de 360 px e configurações separadas acima dele, com mesma largura e intervalo de 12 px, seguindo a base de Calendário/Áudio.
 - Tema Fluent, cabeçalho de 64 px, controles de 32 px, materiais translúcidos, grupos expansíveis e rolagem com botão de rodapé.

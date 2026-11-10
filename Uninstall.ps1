@@ -9,11 +9,17 @@ if (Test-Path -LiteralPath $exe) {
 }
 Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name WindowsStickyNotes -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path ([Environment]::GetFolderPath('Programs')) 'Windows Sticky Notes.lnk') -ErrorAction SilentlyContinue
+$desktopPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Windows Sticky Notes.lnk'
+if (Test-Path -LiteralPath $desktopPath) {
+ $desktop = (New-Object -ComObject WScript.Shell).CreateShortcut($desktopPath)
+ if ($desktop.TargetPath -eq $exe) { Remove-Item -LiteralPath $desktopPath }
+}
 Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WindowsStickyNotes' -ErrorAction SilentlyContinue
 foreach ($relative in @('Assets\Notes.ico','WindowsStickyNotes.exe','WindowsStickyNotes.pdb','build-info.json','Uninstall.ps1')) {
  $file = Join-Path $target $relative
  if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file -Force }
 }
+Get-ChildItem -LiteralPath (Join-Path $target 'Assets') -Filter 'Notes-*.ico' -File -ErrorAction SilentlyContinue | Where-Object Name -Match '^Notes-\d+\.\d+\.\d+\.ico$' | ForEach-Object { Remove-Item -LiteralPath $_.FullName }
 foreach ($folder in @((Join-Path $target 'Assets'),$target)) {
  if ((Test-Path -LiteralPath $folder) -and !(Get-ChildItem -LiteralPath $folder -Force)) { Remove-Item -LiteralPath $folder }
 }

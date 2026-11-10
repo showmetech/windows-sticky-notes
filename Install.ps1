@@ -1,4 +1,4 @@
-param([switch]$NoLaunch)
+param([switch]$NoLaunch,[switch]$DesktopShortcut)
 $ErrorActionPreference = 'Stop'
 $source = Join-Path $PSScriptRoot 'app'
 $target = Join-Path $env:LOCALAPPDATA 'Programs\WindowsStickyNotes'
@@ -27,14 +27,25 @@ $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'Windows St
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = $exe
 $shortcut.WorkingDirectory = $target
-$shortcut.IconLocation = (Join-Path $target 'Assets\Notes.ico')
+$iconPath = Join-Path $target ('Assets\Notes-'+$buildInfo.version+'.ico')
+$shortcut.IconLocation = $iconPath
 $shortcut.Description = 'Notas coloridas na área de trabalho. Acesso pela bandeja do Windows.'
 $shortcut.Save()
+$desktopPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Windows Sticky Notes.lnk'
+if ($DesktopShortcut -or (Test-Path -LiteralPath $desktopPath)) {
+ if ((Test-Path -LiteralPath $desktopPath) -and $shell.CreateShortcut($desktopPath).TargetPath -ne $exe) { throw 'O atalho da área de trabalho com esse nome pertence a outro aplicativo. Ele foi preservado.' }
+ $desktop = $shell.CreateShortcut($desktopPath)
+ $desktop.TargetPath = $exe
+ $desktop.WorkingDirectory = $target
+ $desktop.IconLocation = $iconPath
+ $desktop.Description = $shortcut.Description
+ $desktop.Save()
+}
 $uninstall = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WindowsStickyNotes'
 New-Item -Path $uninstall -Force | Out-Null
 $properties = @{
  DisplayName='Windows Sticky Notes'; DisplayVersion=([System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion.Split('+')[0]); Publisher='Bruno Ayres Martinez';
- InstallLocation=$target; DisplayIcon=(Join-Path $target 'Assets\Notes.ico');
+ InstallLocation=$target; DisplayIcon=$iconPath;
  UninstallString=('powershell.exe -NoProfile -File "' + (Join-Path $target 'Uninstall.ps1') + '"')
 }
 foreach ($key in $properties.Keys) { Set-ItemProperty -Path $uninstall -Name $key -Value $properties[$key] }
