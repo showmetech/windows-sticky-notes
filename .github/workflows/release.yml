@@ -28,8 +28,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Inject native Google registration without committing credentials
+        if: github.event_name != 'pull_request'
+        env:
+          GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
+        shell: pwsh
+        run: |
+          if ($env:GOOGLE_DESKTOP_CLIENT_SECRET) {
+            python scripts/google-client.py
+            if ($LASTEXITCODE) { throw 'Google registration injection failed' }
+          } else {
+            'Google registration absent: development artifact; public release will be blocked.' >> $env:GITHUB_STEP_SUMMARY
+          }
       - name: Build x64 and ARM64 and test isolated data
-        run: python scripts/release.py build
+        run: |
+          python scripts/check-text.py
+          if ($LASTEXITCODE) { throw 'Text encoding validation failed' }
+          python scripts/release.py build
       - name: Restore official Microsoft packaging tools
         run: dotnet restore tools/Packaging/Packaging.csproj
       - name: Validate both MSIX packages with a separate test-only identity
@@ -99,6 +114,17 @@ jobs:
           $version = $project.Project.PropertyGroup.Version | Where-Object { $_ }
           if ($env:MANUAL_RELEASE -eq 'true') { $env:TAG = "v$version" }
           if ($env:TAG -ne "v$version") { throw 'Tag and project version differ' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          foreach ($archive in @(Get-ChildItem downloaded -Recurse -Filter '*.zip')) {
+            $zip = [IO.Compression.ZipFile]::OpenRead($archive.FullName)
+            try {
+              $entry = $zip.GetEntry('app/build-info.json')
+              if (!$entry) { throw 'Release build metadata missing' }
+              $reader = [IO.StreamReader]::new($entry.Open())
+              try { $metadata = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+              if ($metadata.googleOAuthConfigured -ne $true) { throw 'Google desktop registration missing: public release blocked' }
+            } finally { $zip.Dispose() }
+          }
           $files = @(Get-ChildItem downloaded -Recurse -File | Where-Object { $_.Extension -in '.zip','.msixbundle','.msixupload' -or $_.Name -eq 'SHA256.txt' } | ForEach-Object FullName)
           gh release create $env:TAG @files --target $env:COMMIT --title "Windows Sticky Notes $version" --notes-file docs/release-notes.md
           if ($LASTEXITCODE) { throw 'Release failed; existing release assets are never replaced silently' }

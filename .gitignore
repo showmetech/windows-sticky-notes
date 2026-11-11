@@ -9,6 +9,9 @@ store/status.local.json
 *.pfx
 *.p12
 *.dpapi
+*.dat
+.sync/
+work/
 *.note
 *.bak
 *.log

@@ -1,4 +1,13 @@
-# Windows Sticky Notes 1.3.2
+# Windows Sticky Notes 1.4.0
+
+- Sincronização opcional de notas, formatação, imagens, cores, áreas e lixeira pela mesma conta Google no desktop e notebook.
+- Acesso somente à pasta privada do app no Google Drive, com login no navegador do sistema e confirmação da conta antes do primeiro envio.
+- Histórico de revisões, continuidade offline e cópias de conflito para preservar edições simultâneas. Posições e tamanhos permanecem independentes por computador.
+- Sessões protegidas pelo Windows; backups exportados não incluem credenciais ou cache de sincronização.
+- Português corrigido na tela de retorno do login e em avisos existentes. Verificação de UTF-8 incluída no fluxo de publicação.
+
+## Versão 1.3.2
+
 
 - Notas com quatro ações visíveis no topo: configurações, nova nota, fixar e minimizar/ocultar. O símbolo de minimizar substitui o X, sem excluir a nota nem criar janela na barra de tarefas.
 - Base com exatamente seis ações alinhadas: cor, imagem, negrito, itálico, lista com marcadores e lixeira com confirmação.

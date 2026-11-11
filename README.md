@@ -37,7 +37,7 @@ O aplicativo é instalado por usuário, sem administrador, em `%LOCALAPPDATA%\Pr
 
 Escolha o pacote x64 para Intel/AMD ou ARM64 para Windows em ARM. Pacote portátil: extraia o ZIP inteiro e abra `app\WindowsStickyNotes.exe`. Para instalar, execute `Install.ps1` com PowerShell. Não é necessário instalar o .NET: o runtime da arquitetura escolhida acompanha o executável. O pacote portátil não tem assinatura digital. A publicação na Microsoft Store depende de cadastro aprovado, identidade oficial e certificação; consulte o estado da release, sem presumir que já está disponível na loja.
 
-As notas ficam em `%LOCALAPPDATA%\Bruno\WindowsStickyNotes`. Não há conta, sincronização, telemetria ou código de acesso à internet. Não são criptografadas pelo aplicativo; a proteção depende da conta e do disco do Windows. Backups ZIP também contêm os textos e imagens.
+As notas ficam em `%LOCALAPPDATA%\Bruno\WindowsStickyNotes`. A conta Google é opcional: conecte a mesma conta nos dois computadores em Configurações → Sincronização com Google. O app usa a pasta privada do Google Drive; veja [sincronização e conflitos](docs/GOOGLE-SYNC.md). Não há telemetria. Não são criptografadas pelo aplicativo; a proteção depende da conta e do disco do Windows. Backups ZIP também contêm os textos e imagens.
 
 O salvamento ocorre após 500 ms sem edição, ao ocultar e ao sair. Gravações são atômicas e mantêm uma cópia anterior `.bak`. Falhas de gravação aparecem na nota e impedem o fechamento normal. Em recuperação de corrupção, o original é preservado. Queda de energia antes do salvamento pode perder a última alteração ainda não gravada.
 
