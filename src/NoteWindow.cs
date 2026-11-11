@@ -84,7 +84,7 @@ public sealed class NoteWindow:Window {
   }
   highlightTimer.Start();
  }
- void StopHighlight(){highlightTimer.Stop();focusRing.BeginAnimation(OpacityProperty,null);focusRing.Opacity=0;}
+ internal void StopHighlight(){highlightTimer.Stop();focusRing.BeginAnimation(OpacityProperty,null);focusRing.Opacity=0;}
  public void MarkDirty(bool content=true){if(!ready)return;if(content)Note.Welcome=false;dirty=true;saveTimer.Stop();saveTimer.Start();}
  internal void ReloadSynced(){ready=false;try{TitleBox.Text=Note.Title;Title="Sticky Notes — "+Note.Title;Editor.Document=LoadSyncedDocument();Topmost=Note.Pinned;dirty=false;saveTimer.Stop();ApplyColor();}finally{ready=true;}}
  FlowDocument LoadSyncedDocument(){var doc=new FlowDocument();app.Store.LoadDocument(Note,doc);return doc;}
