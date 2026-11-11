@@ -6,7 +6,7 @@ Ao conectar, títulos, textos formatados, imagens incorporadas, cores, áreas, a
 
 Posições, dimensões, tema e área ativa permanecem independentes em cada computador. O app guarda revisões para preservar alterações offline e cria cópias quando há conflito. Notas excluídas e revisões anteriores continuam recuperáveis no histórico privado; ocupam armazenamento até os dados do aplicativo serem removidos pelo usuário nas configurações do Google Drive. A interface atual não oferece exclusão permanente desse histórico.
 
-O identificador da conta e o token de renovação são protegidos pelo Windows DPAPI, vinculados ao usuário do Windows. Tokens nunca são enviados ao GitHub nem incluídos no backup exportado. Desconectar remove a sessão deste computador, preservando as notas locais e os dados da nuvem; não desconecta outros dispositivos. Revogar o acesso pelo Google pode exigir novo login nos dispositivos.
+O executável inclui o registro do cliente Google para aplicativos desktop, que identifica o app e não concede acesso às notas por si só. O identificador da conta e o token de renovação são protegidos pelo Windows DPAPI, vinculados ao usuário do Windows. Tokens nunca são enviados ao GitHub nem incluídos no backup exportado. Desconectar remove a sessão deste computador, preservando as notas locais e os dados da nuvem; não desconecta outros dispositivos. Revogar o acesso pelo Google pode exigir novo login nos dispositivos.
 
 O usuário pode importar imagens locais, colar imagens da área de transferência, exportar backups ZIP e abrir a pasta de dados. Backups contêm o texto e as imagens; quem tiver acesso a eles poderá ler esse conteúdo. O aplicativo não adiciona criptografia própria.
 
