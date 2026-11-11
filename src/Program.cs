@@ -53,7 +53,7 @@ public sealed class NotesApp:Application {
  NoteWindow Get(Note n){if(NoteWindows.TryGetValue(n.Id,out var w))return w;w=new NoteWindow(this,n);NoteWindows[n.Id]=w;return w;}
  public NoteWindow NewNote(){var n=Store.Create();var visible=NoteWindows.Values.Where(w=>w.IsVisible).ToList();if(visible.Count>0){var last=visible.Last();n.Left=last.Left+28;n.Top=last.Top+28;}var w=Get(n);w.Present();w.TitleBox.Focus();w.TitleBox.SelectAll();library?.Refresh();return w;}
  public void ShowNotes(){var notes=Store.Book.Notes.Where(n=>!n.Deleted&&n.Area==Store.Book.ActiveArea).ToList();foreach(var n in notes)Get(n).Present();if(notes.Count==0)ShowLibrary();}
- public void ShowNote(Note n){if(Store.Book.ActiveArea!=n.Area)SwitchArea(n.Area);Get(n).Present();}
+ public void ShowNote(Note n){if(Store.Book.ActiveArea!=n.Area)SwitchArea(n.Area);if(Store.Book.ActiveArea!=n.Area)return;var window=Get(n);window.Present();window.Highlight();}
  public void HideNotes(){foreach(var w in NoteWindows.Values)if(w.IsVisible)w.Conceal();}
  public void SwitchArea(string area){if(!FlushAll())return;HideNotes();Store.Book.ActiveArea=area;Store.Save();ShowNotes();}
  public void MoveNoteToArea(Note note,string area){if(!Store.Book.Areas.Contains(area)||note.Area==area||!FlushAll())return;string previous=note.Area;note.Area=area;try{Store.Save();}catch(Exception e){note.Area=previous;Visuals.Error("Não foi possível mover a nota. Ela foi preservada.\n"+e.Message);return;}if(area!=Store.Book.ActiveArea&&NoteWindows.TryGetValue(note.Id,out var window))window.Conceal();RefreshWidget();}

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
@@ -48,6 +50,20 @@ internal sealed class LiveVerification {
    Check("Recollecting widget preserves visible desktop notes",!app.Widget.IsVisible&&app.NoteWindows.Values.All(w=>w.IsVisible));app.HandleTrayClick();break;
   case 9:
    Check("Tray handler opens widget and saved notes together",app.Widget.IsVisible&&app.NoteWindows.Values.All(w=>w.IsVisible));
+   var tiles=app.Widget.NoteTiles;
+   Check("Widget has one compact single-line button per note with exact saved color and readable title",tiles.Length==3&&tiles.All(tile=>{var n=app.Store.Book.Notes.Single(n=>n.Id==(string)tile.Tag);return tile.Content is TextBlock text&&text.Text==n.Title&&text.TextWrapping==TextWrapping.NoWrap&&text.TextTrimming==TextTrimming.CharacterEllipsis&&tile.Height==46&&(SystemParameters.HighContrast||tile.Background is SolidColorBrush brush&&brush.Color==(Color)ColorConverter.ConvertFromString(n.Color)&&tile.Foreground is SolidColorBrush ink&&NoteColors.Contrast(brush.Color,ink.Color)>=4.5);}));
+   app.HideNotes();break;
+  case 10:
+   Check("Notes concealed before tile activation",app.NoteWindows.Values.All(w=>!w.IsVisible));
+   app.Widget.NoteTiles[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));break;
+  case 11:
+   var selected=app.NoteWindows[(string)app.Widget.NoteTiles[0].Tag];
+   Check("Clicking colored tile opens only that note and highlights its border",selected.IsVisible&&selected.HighlightVisible&&app.NoteWindows.Values.Where(w=>w!=selected).All(w=>!w.IsVisible&&!w.HighlightVisible));
+   app.Widget.NoteTiles[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));break;
+  case 12:Check("Repeated tile click restarts border highlight",app.NoteWindows.Values.Count(w=>w.HighlightVisible)==1);break;
+  case 13:case 14:case 15:break;
+  case 16:
+   Check("Highlight clears automatically while selected note stays visible",app.NoteWindows.Values.All(w=>!w.HighlightVisible)&&app.NoteWindows.Values.Count(w=>w.IsVisible)==1);
    Check("Flush succeeds",app.FlushAll());timer.Stop();Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);CapturePreview();File.WriteAllText(report,JsonSerializer.Serialize(new{at=DateTimeOffset.Now,failed,checks,notes=app.NoteWindows.Values.Select(w=>new{w.Note.Title,w.Left,w.Top,w.Width,w.Height,w.ShowInTaskbar}),limitations="Tray restoration invoked through the same handler as the native left click; no physical tray click was automated. Physical monitor hot-unplug, ARM64 hardware and OS reboot were not tested. Preview PNGs render the real WPF window tree with fixture notes, not a screenshot of the desktop."},new JsonSerializerOptions{WriteIndented=true}));app.ExitApp();break;
  }}catch(Exception ex){timer.Stop();File.WriteAllText(report,ex.ToString());app.ExitApp();}}
  void CapturePreview(){var examples=app.NoteWindows.Values.ToArray();for(int i=0;i<examples.Length;i++){examples[i].Note.ColorMode=i==0?"Vivid":"Neon";examples[i].Note.Color=i==0?"#8338EC":i==1?"#39FF14":"#FF00D4";}foreach(string theme in new[]{"Claro","Escuro"}){app.Store.Book.Theme=theme;app.ApplyTheme();app.FlushAll();var visual=new System.Windows.Media.DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(Visuals.Brush(theme=="Claro"?"#E9EDF3":"#191C23"),null,new Rect(0,0,1100,410));int index=0;foreach(var w in app.NoteWindows.Values){w.UpdateLayout();dc.DrawRectangle(new System.Windows.Media.VisualBrush(w){Stretch=System.Windows.Media.Stretch.Fill},null,new Rect(18+index*356,20,w.Width,w.Height));index++;}}var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap(1650,615,144,144,System.Windows.Media.PixelFormats.Pbgra32);bitmap.Render(visual);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using var file=File.Create(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(report))!,theme=="Claro"?"preview-claro.png":"preview-escuro.png"));encoder.Save(file);}}

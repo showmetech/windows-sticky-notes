@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Forms=System.Windows.Forms;
@@ -21,6 +22,9 @@ public sealed class NoteWindow:Window {
  public readonly TextBox TitleBox;
  readonly NotesApp app;readonly Border surface;readonly TextBlock status=new(){FontSize=11,TextWrapping=TextWrapping.Wrap,Visibility=Visibility.Collapsed};
  readonly DispatcherTimer saveTimer=new(){Interval=TimeSpan.FromMilliseconds(500)};
+ readonly Border focusRing=new(){IsHitTestVisible=false,CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(3),Opacity=0,Margin=new Thickness(-16,-10,-16,-10)};
+ readonly DispatcherTimer highlightTimer=new(){Interval=TimeSpan.FromSeconds(2.8)};
+ internal bool HighlightVisible=>focusRing.Opacity>0;
  readonly Button pin;readonly Button colorButton;bool ready,dirty,disposed,placing,dragging,resizing,confirming;int visibilityGeneration;
  public NoteWindow(NotesApp app,Note note){this.app=app;Note=note;Visuals.Base(this,note.Width,note.Height);MinWidth=300;MinHeight=260;Title="Sticky Notes — "+note.Title;Topmost=note.Pinned;
   ShowInTaskbar=Environment.GetCommandLineArgs().Contains("--inspect");if(double.IsFinite(note.Left))Left=note.Left;if(double.IsFinite(note.Top))Top=note.Top;
@@ -40,10 +44,11 @@ public sealed class NoteWindow:Window {
   tools.Children.Add(Visuals.Icon("\uE8DB","Itálico (Ctrl+I)",()=>{Editor.Focus();EditingCommands.ToggleItalic.Execute(null,Editor);}));
   tools.Children.Add(Visuals.Icon("\uE8FD","Lista com marcadores",()=>{Editor.Focus();EditingCommands.ToggleBullets.Execute(null,Editor);}));
   foreach(Button action in tools.Children)action.Margin=new Thickness(1,0,1,0);var toolbar=new Grid{Margin=new Thickness(0,10,0,8)};toolbar.ColumnDefinitions.Add(new());toolbar.ColumnDefinitions.Add(new(){Width=GridLength.Auto});toolbar.Children.Add(tools);var trash=Visuals.Icon("\uE74D","Excluir nota",RequestDelete);trash.Margin=new Thickness(1,0,0,0);Grid.SetColumn(trash,1);toolbar.Children.Add(trash);Grid.SetRow(toolbar,3);layout.Children.Add(toolbar);
-  Grid.SetRow(status,4);layout.Children.Add(status);InstallResizeHandles(frame);
+  Grid.SetRow(status,4);layout.Children.Add(status);InstallResizeHandles(frame);Panel.SetZIndex(focusRing,2);frame.Children.Add(focusRing);
+  highlightTimer.Tick+=(_,_)=>StopHighlight();
   saveTimer.Tick+=(_,_)=>Save();LocationChanged+=(_,_)=>{if(ready)CapturePosition();};SizeChanged+=(_,_)=>{if(ready)CapturePosition();};
   PreviewKeyDown+=(_,e)=>{if(e.Key==Key.Escape){Conceal();e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.OemComma){app.ShowLibrary(true);e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.N){app.NewNote();e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.S){Save();e.Handled=true;}else if(Keyboard.Modifiers==(ModifierKeys.Control|ModifierKeys.Shift)&&e.Key==Key.H){app.HideNotes();e.Handled=true;}};
-  Closing+=(_,e)=>{if(!app.Exiting){e.Cancel=true;Conceal();}};Closed+=(_,_)=>{disposed=true;saveTimer.Stop();};
+  Closing+=(_,e)=>{if(!app.Exiting){e.Cancel=true;Conceal();}};Closed+=(_,_)=>{disposed=true;saveTimer.Stop();StopHighlight();};
   SourceInitialized+=(_,_)=>FitToScreen();DpiChanged+=(_,_)=>{if(!dragging&&!resizing)Dispatcher.BeginInvoke(FitToScreen);};Deactivated+=(_,_)=>Save();ApplyColor();ready=true;
  }
  public static Rect WorkArea(Window w){var hwnd=new WindowInteropHelper(w).Handle;var a=Forms.Screen.FromHandle(hwnd).WorkingArea;var source=PresentationSource.FromVisual(w);var m=source?.CompositionTarget?.TransformFromDevice??Matrix.Identity;var p=m.Transform(new Point(a.Left,a.Top));var size=m.Transform(new Vector(a.Width,a.Height));return new Rect(p.X,p.Y,size.X,size.Y);}
@@ -66,7 +71,20 @@ public sealed class NoteWindow:Window {
  }finally{placing=false;}CapturePosition();
  }
  public void Present(){if(disposed)return;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
- public void Conceal(){if(confirming||!Save())return;int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
+ public void Conceal(){if(confirming||!Save())return;StopHighlight();int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
+ internal void Highlight(){
+  if(disposed||!IsVisible)return;StopHighlight();
+  var background=NoteColors.Surface(Note.Color,Note.ColorMode,Visuals.Dark(app.Store.Book.Theme));
+  focusRing.BorderBrush=SystemParameters.HighContrast?SystemColors.HighlightBrush:new SolidColorBrush(NoteColors.Text(background));
+  focusRing.Opacity=1;
+  if(SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast){
+   var pulse=new DoubleAnimationUsingKeyFrames{Duration=TimeSpan.FromMilliseconds(2400)};
+   foreach(var point in new[]{(0,1d),(400,.2),(800,1d),(1200,.2),(1600,1d),(2400,0d)})pulse.KeyFrames.Add(new LinearDoubleKeyFrame(point.Item2,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(point.Item1))));
+   focusRing.BeginAnimation(OpacityProperty,pulse);
+  }
+  highlightTimer.Start();
+ }
+ void StopHighlight(){highlightTimer.Stop();focusRing.BeginAnimation(OpacityProperty,null);focusRing.Opacity=0;}
  public void MarkDirty(bool content=true){if(!ready)return;if(content)Note.Welcome=false;dirty=true;saveTimer.Stop();saveTimer.Start();}
  internal void ReloadSynced(){ready=false;try{TitleBox.Text=Note.Title;Title="Sticky Notes — "+Note.Title;Editor.Document=LoadSyncedDocument();Topmost=Note.Pinned;dirty=false;saveTimer.Stop();ApplyColor();}finally{ready=true;}}
  FlowDocument LoadSyncedDocument(){var doc=new FlowDocument();app.Store.LoadDocument(Note,doc);return doc;}
