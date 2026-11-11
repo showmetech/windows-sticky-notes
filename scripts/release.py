@@ -42,7 +42,7 @@ def build():
         clean_stage(output)
         run('dotnet','publish',PROJECT,'-c','Release','-r','win-'+arch,'--self-contained','true','-p:PublishSingleFile=true','-p:IncludeNativeLibrariesForSelfExtract=true','-p:DebugType=None','-o',output,'--nologo')
         commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
-        (output/'build-info.json').write_text(json.dumps({'version':version(),'architecture':arch,'sourceCommit':commit},indent=2),encoding='utf-8')
+        (output/'build-info.json').write_text(json.dumps({'version':version(),'architecture':arch,'sourceCommit':commit,'googleOAuthConfigured':(STAGE/'GoogleDesktopClient.g.cs').is_file()},indent=2),encoding='utf-8')
         # A new icon path prevents Explorer retaining the previous shortcut icon.
         shutil.copy2(output/'Assets'/'Notes.ico',output/'Assets'/f'Notes-{version()}.ico')
         reject_private_files(output)

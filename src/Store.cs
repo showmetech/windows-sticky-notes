@@ -20,6 +20,7 @@ public sealed class Note {
  public double Height {get;set;}=380;
  public bool Pinned {get;set;}
  public bool Deleted {get;set;}
+ public bool Welcome {get;set;}
  public DateTimeOffset Updated {get;set;}=DateTimeOffset.Now;
 }
 public sealed class Notebook {
@@ -37,7 +38,9 @@ public sealed class Store {
  public string? RecoveryMessage {get;private set;}
  static readonly JsonSerializerOptions Json=new(){WriteIndented=true,NumberHandling=System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals};
  public static readonly string[] Palette={"#F5D97E","#B9B0ED","#A5D8BF","#A6CDEE","#EDAFC5","#F0BE95","#A8D8D5","#D1C3B4"};
- public Store(string root){Root=root;Directory.CreateDirectory(Root);Directory.CreateDirectory(Path.Combine(Root,"documents"));Book=Load();}
+ public Store(string root){Root=root;Directory.CreateDirectory(Root);Directory.CreateDirectory(Path.Combine(Root,"documents"));RecoverSync();Book=Load();}
+ void RecoverSync(){string transaction=Path.Combine(Root,".sync","transaction");if(!File.Exists(Path.Combine(transaction,"pending")))return;foreach(string path in Directory.GetFiles(transaction,"*",SearchOption.AllDirectories)){string relative=Path.GetRelativePath(transaction,path);if(relative=="pending")continue;string target=Path.Combine(Root,relative);Directory.CreateDirectory(Path.GetDirectoryName(target)!);File.Copy(path,target,true);}File.Delete(Path.Combine(transaction,"pending"));RecoveryMessage="Uma sincronização interrompida foi revertida. Suas notas locais foram recuperadas.";}
+ internal void SyncTransaction(Action apply){string transaction=Path.Combine(Root,".sync","transaction");if(Directory.Exists(transaction))Directory.Delete(transaction,true);Directory.CreateDirectory(Path.Combine(transaction,"documents"));foreach(string path in Directory.GetFiles(Path.Combine(Root,"documents"),"*.note").Append(Path.Combine(Root,"notebook.json")).Where(File.Exists))File.Copy(path,Path.Combine(transaction,Path.GetRelativePath(Root,path)));Atomic(Path.Combine(transaction,"pending"),System.Text.Encoding.UTF8.GetBytes("rollback"));try{apply();File.Delete(Path.Combine(transaction,"pending"));}catch{RecoverSync();var restored=Load();foreach(var n in Book.Notes){var old=restored.Notes.FirstOrDefault(o=>o.Id==n.Id);if(old!=null){n.Title=old.Title;n.Area=old.Area;n.Color=old.Color;n.ColorMode=old.ColorMode;n.Pinned=old.Pinned;n.Deleted=old.Deleted;n.Preview=old.Preview;n.Updated=old.Updated;n.Welcome=old.Welcome;n.Left=old.Left;n.Top=old.Top;n.Width=old.Width;n.Height=old.Height;}}restored.Notes=restored.Notes.Select(n=>Book.Notes.FirstOrDefault(o=>o.Id==n.Id)??n).ToList();Book=restored;throw;}}
  Notebook Load(){var path=Path.Combine(Root,"notebook.json");if(!File.Exists(path))return new();try{return Read(path);}catch(Exception e) when(e is JsonException or IOException or InvalidDataException){
    var original=path+".unreadable-"+DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");File.Copy(path,original);
    if(File.Exists(path+".bak")){var b=Read(path+".bak");RecoveryMessage="O índice foi recuperado do backup. O arquivo original foi preservado.";return b;}

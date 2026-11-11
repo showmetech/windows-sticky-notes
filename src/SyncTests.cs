@@ -1,0 +1,46 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Documents;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+namespace StickyNotes;
+internal static class SyncTests {
+ internal static void Run(string root,Action<string,Action> check){
+ void Assert(bool ok,string why){if(!ok)throw new Exception(why);}
+ SyncData Data(string text)=>new("11111111111111111111111111111111","Título","Projetos","#FF00D4","Neon",false,false,new(){new("paragraph",new(){new(text,true,true)})});
+ SyncJournal Journal(string name)=>new(Path.Combine(root,"sync-tests",name));
+ void Exchange(SyncJournal a,SyncJournal b){foreach(var r in a.Revisions.Values.ToArray())b.Add(r);foreach(var r in b.Revisions.Values.ToArray())a.Add(r);}
+ check("Sync: two computers receive text, title, neon and areas",()=>{var a=Journal("initial-a");var b=Journal("initial-b");var data=Data("Desktop");a.Capture(new[]{data});Exchange(a,b);var result=b.Resolve().Single().Data;Assert(result==data,"Initial content changed");Assert(SyncDocument.Restore(result).Blocks.Count==1,"Document missing");});
+ check("Sync: simultaneous offline edits converge and retain both versions",()=>{var a=Journal("offline-a");var b=Journal("offline-b");var original=Data("Original");a.Capture(new[]{original});Exchange(a,b);foreach(var r in b.Resolve())b.Baseline[r.Data.Id]=new(r.Head,SyncJson.Hash(SyncJson.Bytes(r.Data)));a.Capture(new[]{Data("Desktop offline")});b.Capture(new[]{Data("Notebook offline")});Exchange(a,b);var first=a.Resolve();var second=b.Resolve();Assert(first.Count==2&&second.Count==2,"An offline version was lost");Assert(first.Select(r=>r.Head).Order().SequenceEqual(second.Select(r=>r.Head).Order()),"Conflict resolution did not converge");Exchange(a,b);Assert(a.Resolve().Count==2,"Repeated synchronization duplicated conflict copies");});
+ check("Sync: deletion versus offline edit retains recoverable conflict",()=>{var a=Journal("delete-a");var b=Journal("delete-b");a.Capture(new[]{Data("Original")});Exchange(a,b);foreach(var r in b.Resolve())b.Baseline[r.Data.Id]=new(r.Head,SyncJson.Hash(SyncJson.Bytes(r.Data)));a.Capture(new[]{Data("Original") with{Deleted=true}});b.Capture(new[]{Data("Edited on laptop")});Exchange(a,b);var notes=a.Resolve();Assert(notes.Count==2&&notes.Single(p=>p.Data.Id==Data("").Id).Data.Deleted&&notes.Any(p=>!p.Data.Deleted&&p.Data.Title.Contains("conflito")),"Delete/edit conflict lost data");});
+ check("Sync: duplicate remote revision and retries are idempotent",()=>{var a=Journal("retry");var r=new SyncRevision(1,Array.Empty<string>(),Data("Repeat"));a.Add(r);a.Add(r);Assert(a.Revisions.Count==1&&a.Resolve().Count==1,"Upload retry duplicated notes");});
+ check("Sync: journal survives restart and isolates accounts",()=>{string path=Path.Combine(root,"sync-tests","restart");var a=new SyncJournal(path);a.Capture(new[]{Data("Pending offline")});var reloaded=new SyncJournal(path);Assert(reloaded.Revisions.Count==1&&reloaded.Baseline.Count==1,"Pending revision lost on restart");Assert(Journal("other-account").Revisions.Count==0,"Accounts share local journal");});
+ check("Sync: geometry never creates content revisions",()=>{var n=new Note{Id=Data("").Id};var doc=new FlowDocument(new Paragraph(new Run("Text")));var first=SyncJson.Bytes(SyncDocument.Capture(n,doc));n.Left=-1800;n.Top=500;n.Width=900;n.Height=700;Assert(first.SequenceEqual(SyncJson.Bytes(SyncDocument.Capture(n,doc))),"Device geometry leaked into cloud fingerprint");});
+ check("Sync: safe codec preserves formatting, nested lists and PNG",()=>{var doc=new FlowDocument(new Paragraph(new Bold(new Italic(new Run("Acentuação")))));var list=new System.Windows.Documents.List(new ListItem(new Paragraph(new Run("Item"))));doc.Blocks.Add(list);var pixels=Enumerable.Repeat((byte)200,32*16*4).ToArray();doc.Blocks.Add(new BlockUIContainer(new System.Windows.Controls.Image{Source=BitmapSource.Create(32,16,96,96,PixelFormats.Bgra32,null,pixels,128)}));var note=new Note();var captured=SyncDocument.Capture(note,doc);var restored=SyncDocument.Restore(captured);var roundtrip=SyncDocument.Capture(note,restored);Assert(SyncJson.Bytes(captured).SequenceEqual(SyncJson.Bytes(roundtrip)),"Codec changed rich content");});
+ check("Sync: untrusted XAML and invalid hashes are rejected",()=>{var d=Data("safe") with{Blocks=new(){new("XamlReader.Load",Image:"https://example.invalid")}};try{SyncDocument.Restore(d);throw new Exception("Unsafe type accepted");}catch(InvalidDataException){}var r=new SyncRevision(1,Array.Empty<string>(),Data("Safe"));try{SyncJson.Read(SyncJson.Bytes(r),new string('0',64));throw new Exception("Wrong hash accepted");}catch(InvalidDataException){}});
+ check("Sync: missing ancestors stop merge without losing local revisions",()=>{var j=Journal("missing");j.Add(new(1,new[]{new string('a',64)},Data("Preserved")));try{j.Resolve();throw new Exception("Partial history accepted");}catch(InvalidDataException){Assert(j.Revisions.Count==1,"Data removed after failure");}});
+ check("Sync: local commit failure rolls back text, index and note references",()=>{var store=new Store(Path.Combine(root,"sync-tests","transaction"));var n=store.Create();n.Title="Before";store.SaveDocument(n,new FlowDocument(new Paragraph(new Run("Before"))));try{store.SyncTransaction(()=>{n.Title="After";store.SaveDocument(n,new FlowDocument(new Paragraph(new Run("After"))));throw new IOException("Simulated disk failure");});}catch(IOException){}var d=new FlowDocument();store.LoadDocument(n,d);Assert(n.Title=="Before"&&new TextRange(d.ContentStart,d.ContentEnd).Text.Contains("Before")&&ReferenceEquals(store.Book.Notes.Single(),n),"Transaction lost original note or live reference");});
+ check("Sync: Drive pagination, multipart upload and rotated tokens use only appDataFolder",()=>{var handler=new FakeGoogle();using var drive=new GoogleDriveSync(Path.Combine(root,"sync-tests","http"),handler,"synthetic.apps.googleusercontent.com");drive.Accept(new("synthetic-subject","fixture@example.invalid","synthetic-refresh"));var files=drive.List(default).GetAwaiter().GetResult();Assert(files.Count==1&&handler.ListPages==2,"Drive pagination lost revisions");var r=drive.Download("fixture-file",handler.Revision.Hash,default).GetAwaiter().GetResult();drive.Upload(r.Hash,r,default).GetAwaiter().GetResult();Assert(handler.Uploads==1&&drive.Session!.RefreshToken=="rotated-synthetic-refresh","Upload or refresh rotation failed");drive.Disconnect();Assert(!File.Exists(Path.Combine(root,"sync-tests","http",".sync","google-session.dat")),"Disconnect left refresh token behind");});
+ check("Google login page: Portuguese accents survive any transport encoding",()=>{string html=GoogleLoginPage.Html(true);Assert(html.All(c=>c<128),"Login page contains transport-dependent bytes");Assert(System.Net.WebUtility.HtmlDecode(html).Contains("sincroniza\u00e7\u00e3o"),"Portuguese text is corrupted");});
+ check("Sync: token encryption is bound to current Windows user",()=>{byte[] sample=Encoding.UTF8.GetBytes("synthetic-refresh-token");var protectedBytes=System.Security.Cryptography.ProtectedData.Protect(sample,null,System.Security.Cryptography.DataProtectionScope.CurrentUser);Assert(!protectedBytes.SequenceEqual(sample)&&sample.SequenceEqual(System.Security.Cryptography.ProtectedData.Unprotect(protectedBytes,null,System.Security.Cryptography.DataProtectionScope.CurrentUser)),"Token was not protected");});
+ }
+ sealed class FakeGoogle:System.Net.Http.HttpMessageHandler {
+  internal int ListPages,Uploads;internal readonly SyncRevision Revision=new(1,Array.Empty<string>(),new("22222222222222222222222222222222","Fixture","Minha mesa","#FF00D4","Neon",false,false,new(){new("paragraph",new(){new("Synthetic note")})}));
+  protected override async System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage> SendAsync(System.Net.Http.HttpRequestMessage request,System.Threading.CancellationToken token){
+   string url=request.RequestUri!.AbsoluteUri;string body;
+   if(url=="https://oauth2.googleapis.com/token")body="{\"access_token\":\"synthetic-access\",\"expires_in\":3600,\"refresh_token\":\"rotated-synthetic-refresh\"}";
+   else {if(request.Headers.Authorization?.Parameter!="synthetic-access")throw new Exception("Missing bearer after refresh rotation");
+    if(url.Contains("uploadType=multipart")){var multipart=await request.Content!.ReadAsStringAsync(token);if(!multipart.Contains("appDataFolder")||!multipart.Contains(Revision.Hash))throw new Exception("Wrong upload folder or name");Uploads++;body="{\"id\":\"fixture-file\"}";}
+    else if(url.Contains("alt=media"))return new(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.ByteArrayContent(SyncJson.Bytes(Revision))};
+    else if(url.Contains("spaces=appDataFolder")){ListPages++;body=ListPages==1?"{\"files\":[{\"id\":\"fixture-file\",\"name\":\"sticky-v1-"+Revision.Hash+".json\"}],\"nextPageToken\":\"page-two\"}":"{\"files\":[]}";if(ListPages==2&&!url.Contains("pageToken=page-two"))throw new Exception("Missing pagination cursor");}
+    else throw new Exception("Unexpected Google endpoint");
+   }return new(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.StringContent(body)};
+  }
+ }
+
+}
