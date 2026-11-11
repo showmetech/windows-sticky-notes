@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.4.0
+# Windows Sticky Notes 1.4.1
+
+- Lista do widget simplificada: retângulos inteiramente na cor da nota e somente uma linha de título, com reticências para títulos longos.
+- Clique em qualquer ponto do retângulo abre e destaca a nota na área de trabalho com um contorno pulsante temporário. Cliques repetidos reiniciam o destaque.
+- Destaque respeita a opção de animações e o alto contraste do Windows, sem alterar posição, tamanho, conteúdo ou fixação da nota.
+
+## Versão 1.4.0
 
 - Sincronização opcional de notas, formatação, imagens, cores, áreas e lixeira pela mesma conta Google no desktop e notebook.
 - Acesso somente à pasta privada do app no Google Drive, com login no navegador do sistema e confirmação da conta antes do primeiro envio.
