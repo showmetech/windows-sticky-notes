@@ -62,6 +62,7 @@ public sealed class NotesApp:Application {
  public bool FlushAll(){bool ok=true;foreach(var w in NoteWindows.Values)ok=w.Save()&&ok;return ok;}
  public void ExitApp(){if(!FlushAll()){Visuals.Error("Há alterações que não puderam ser salvas. Libere espaço ou verifique a pasta de dados e tente Ctrl+S antes de sair.");return;}Store.Save();Sync?.Dispose();Exiting=true;foreach(var w in NoteWindows.Values)w.Close();library?.Close();Shutdown();}
  public void ApplyTheme(){foreach(var w in NoteWindows.Values)w.ApplyColor();library?.Refresh();}
+ internal void ApplyBackgroundOpacity(){foreach(Window window in Windows)if((window is NoteWindow or WidgetWindow or SettingsWindow)&&window.Content is System.Windows.Controls.Border border)Visuals.ApplyBackgroundOpacity(border);}
  internal void RefreshWidget()=>library?.RefreshNotes();
  void DisplaysChanged(object? s,EventArgs e)=>Dispatcher.BeginInvoke(()=>{foreach(var w in NoteWindows.Values)w.FitToScreen();library?.Refit();});
  void PreferencesChanged(object s,UserPreferenceChangedEventArgs e)=>Dispatcher.BeginInvoke(ApplyTheme);

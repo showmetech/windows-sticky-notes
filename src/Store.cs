@@ -26,6 +26,8 @@ public sealed class Note {
 public sealed class Notebook {
  public int Schema {get;set;}=1;
  public string Theme {get;set;}="Sistema";
+ int backgroundOpacity=100;
+ public int BackgroundOpacity {get=>backgroundOpacity;set=>backgroundOpacity=Math.Clamp(value,0,100);}
  public bool WidgetPinned {get;set;}
  public string ActiveArea {get;set;}="Minha mesa";
  public int ColorSequence {get;set;}

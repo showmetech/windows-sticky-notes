@@ -1,4 +1,9 @@
-# Windows Sticky Notes 1.4.2
+# Windows Sticky Notes 1.4.3
+
+- Barra de opacidade do fundo nas configurações de aparência, de 0% a 100%, com valor visível, ajuste imediato e padrão 100%.
+- Preferência salva neste computador; instalações existentes começam em 100%. Textos e botões permanecem visíveis ao reduzir a opacidade.
+
+## Versão 1.4.2
 
 - Widget, configurações e superfícies do app 100% opacos por padrão nos temas claro, escuro e do sistema.
 - Preservados os controles de aparência e as animações de abertura, recolhimento e destaque das notas.
