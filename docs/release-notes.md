@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.4.3
+# Windows Sticky Notes 1.4.4
+
+- Configurações organizadas em cinco seções com ícones: Aparência, Áreas, Google, Dados e Atalhos.
+- Informações essenciais, ações com ícones e páginas que se ajustam ao espaço disponível sem barra de rolagem.
+- Barra de opacidade com padrão 100%, aplicação imediata e preferência salva por computador.
+
+## Versão 1.4.3
 
 - Barra de opacidade do fundo nas configurações de aparência, de 0% a 100%, com valor visível, ajuste imediato e padrão 100%.
 - Preferência salva neste computador; instalações existentes começam em 100%. Textos e botões permanecem visíveis ao reduzir a opacidade.
