@@ -1,4 +1,9 @@
-# Windows Sticky Notes 1.4.1
+# Windows Sticky Notes 1.4.2
+
+- Widget, configurações e superfícies do app 100% opacos por padrão nos temas claro, escuro e do sistema.
+- Preservados os controles de aparência e as animações de abertura, recolhimento e destaque das notas.
+
+## Versão 1.4.1
 
 - Lista do widget simplificada: retângulos inteiramente na cor da nota e somente uma linha de título, com reticências para títulos longos.
 - Clique em qualquer ponto do retângulo abre e destaca a nota na área de trabalho com um contorno pulsante temporário. Cliques repetidos reiniciam o destaque.
