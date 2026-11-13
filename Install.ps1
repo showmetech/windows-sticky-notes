@@ -13,7 +13,9 @@ if (Test-Path -LiteralPath $exe) {
     Start-Process -FilePath $exe -ArgumentList '--quit' -WindowStyle Hidden -Wait
     $running = Get-Process WindowsStickyNotes -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe }
     foreach ($process in $running) { Wait-Process -Id $process.Id -Timeout 12 -ErrorAction Stop }
-    $backup = $target + '.backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+    $backupRoot = Join-Path $env:LOCALAPPDATA 'Bruno\WindowsStickyNotes-backups'
+    New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+    $backup = Join-Path $backupRoot ((Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N'))
     Copy-Item -LiteralPath $target -Destination $backup -Recurse
 }
 New-Item -ItemType Directory -Path $target -Force | Out-Null
@@ -51,6 +53,15 @@ $properties = @{
 foreach ($key in $properties.Keys) { Set-ItemProperty -Path $uninstall -Name $key -Value $properties[$key] }
 Set-ItemProperty -Path $uninstall -Name NoModify -Value 1 -Type DWord
 Set-ItemProperty -Path $uninstall -Name NoRepair -Value 1 -Type DWord
+# Retire only versioned icons already preserved in this installation backup.
+if ($backup) {
+ $assets = Join-Path $target 'Assets'
+ Get-ChildItem -LiteralPath $assets -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^Notes-\d+\.\d+\.\d+\.ico$' -and $_.FullName -ne $iconPath } | ForEach-Object {
+  $saved = Join-Path (Join-Path $backup 'Assets') $_.Name
+  if (!(Test-Path -LiteralPath $saved) -or (Get-FileHash -LiteralPath $saved).Hash -ne (Get-FileHash -LiteralPath $_.FullName).Hash) { throw 'O backup do ícone anterior não foi confirmado. Arquivo preservado.' }
+  Remove-Item -LiteralPath $_.FullName
+ }
+}
 if (!$NoLaunch) { Start-Process -FilePath $exe -WindowStyle Hidden }
 Write-Output ('Instalado em: ' + $target)
 Write-Output 'Inicialização automática ativada. Notas e imagens são salvas em LocalAppData\Bruno\WindowsStickyNotes.'

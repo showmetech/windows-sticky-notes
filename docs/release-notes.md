@@ -1,4 +1,9 @@
-# Windows Sticky Notes 1.4.5
+# Windows Sticky Notes 1.4.6
+
+- Atualizações guardam o backup fora da pasta de programas e retiram ícones de versões antigas somente após confirmar sua cópia de segurança.
+- Instalação, atalhos e inicialização continuam usando um único caminho fixo.
+
+## Versão 1.4.5
 
 - Testes isolados removem somente o próprio registro de bandeja ao encerrar, evitando entradas antigas nas configurações do Windows.
 - Preservado o identificador fixo da instalação principal e os registros dos demais aplicativos.
