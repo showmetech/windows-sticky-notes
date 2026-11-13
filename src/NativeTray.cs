@@ -11,9 +11,9 @@ internal sealed class NativeTray:IDisposable {
  readonly uint taskbarCreated;
  readonly Guid id=new("c2f81dae-61aa-46ce-a2a8-2dc643296760");
  IntPtr icon;string iconPath;
- bool modern,disposed;
+ bool modern,disposed;readonly bool isolated;
  public NativeTray(HwndSource source,string iconFile,Action toggle,Action context,Guid? identity=null){
-  if(identity.HasValue)id=identity.Value;
+  isolated=identity.HasValue;if(identity.HasValue)id=identity.Value;
   this.source=source;this.toggle=toggle;this.context=context;iconPath=iconFile;
   taskbarCreated=RegisterWindowMessage("TaskbarCreated");
   icon=LoadImage(IntPtr.Zero,iconFile,1,GetSystemMetrics(49),GetSystemMetrics(50),0x10);
@@ -40,7 +40,12 @@ internal sealed class NativeTray:IDisposable {
  }
  public bool Visible=>!disposed;
  public bool TryBounds(out IconRect rect){var identity=new Identity{Size=(uint)Marshal.SizeOf<Identity>(),Window=source.Handle,Id=1,Guid=id};return Shell_NotifyIconGetRect(ref identity,out rect)==0;}
- public void Dispose(){if(disposed)return;disposed=true;var data=Create();Shell_NotifyIcon(2,ref data);source.RemoveHook(Hook);if(icon!=IntPtr.Zero){DestroyIcon(icon);icon=IntPtr.Zero;}}
+ public void Dispose(){if(disposed)return;disposed=true;var data=Create();Shell_NotifyIcon(2,ref data);source.RemoveHook(Hook);if(isolated)RemoveTestHistory();if(icon!=IntPtr.Zero){DestroyIcon(icon);icon=IntPtr.Zero;}}
+ void RemoveTestHistory(){
+  try{using var root=Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Control Panel\NotifyIconSettings",true);if(root==null)return;foreach(string key in root.GetSubKeyNames()){bool own;using(var item=root.OpenSubKey(key)){own=string.Equals(ExpandIconPath(item?.GetValue("ExecutablePath") as string),Environment.ProcessPath,StringComparison.OrdinalIgnoreCase)&&Guid.TryParse(item?.GetValue("IconGuid") as string,out var guid)&&guid==id;}if(own)root.DeleteSubKeyTree(key,false);}}catch(Exception e) when(e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException){System.Diagnostics.Debug.WriteLine("Sticky Notes: test tray history cleanup deferred: "+e.GetType().Name);}
+ }
+ static string? ExpandIconPath(string? path){if(string.IsNullOrEmpty(path)||path[0]!='{')return path;int end=path.IndexOf('}');if(end<0||!Guid.TryParse(path[..(end+1)],out var folder))return path;IntPtr value=IntPtr.Zero;try{if(SHGetKnownFolderPath(ref folder,0,IntPtr.Zero,out value)!=0)return path;return System.IO.Path.Combine(Marshal.PtrToStringUni(value)??"",path[(end+1)..].TrimStart('\\'));}finally{if(value!=IntPtr.Zero)Marshal.FreeCoTaskMem(value);}}
+ [DllImport("shell32.dll")]static extern int SHGetKnownFolderPath(ref Guid id,uint flags,IntPtr token,out IntPtr path);
  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]struct Data{
   public uint Size;public IntPtr Window;public uint Id,Flags,Message;public IntPtr Icon;
   [MarshalAs(UnmanagedType.ByValTStr,SizeConst=128)]public string Tip;

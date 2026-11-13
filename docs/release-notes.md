@@ -1,4 +1,9 @@
-# Windows Sticky Notes 1.4.4
+# Windows Sticky Notes 1.4.5
+
+- Testes isolados removem somente o próprio registro de bandeja ao encerrar, evitando entradas antigas nas configurações do Windows.
+- Preservado o identificador fixo da instalação principal e os registros dos demais aplicativos.
+
+## Versão 1.4.4
 
 - Configurações organizadas em cinco seções com ícones: Aparência, Áreas, Google, Dados e Atalhos.
 - Informações essenciais, ações com ícones e páginas que se ajustam ao espaço disponível sem barra de rolagem.
