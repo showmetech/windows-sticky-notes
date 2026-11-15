@@ -58,7 +58,22 @@ public sealed class NotesApp:Application {
  public void SwitchArea(string area){if(!FlushAll())return;HideNotes();Store.Book.ActiveArea=area;Store.Save();ShowNotes();}
  public void MoveNoteToArea(Note note,string area){if(!Store.Book.Areas.Contains(area)||note.Area==area||!FlushAll())return;string previous=note.Area;note.Area=area;try{Store.Save();}catch(Exception e){note.Area=previous;Visuals.Error("Não foi possível mover a nota. Ela foi preservada.\n"+e.Message);return;}if(area!=Store.Book.ActiveArea&&NoteWindows.TryGetValue(note.Id,out var window))window.Conceal();RefreshWidget();}
  public void ShowLibrary(bool settings=false){var widget=EnsureWidget();widget.Present();if(settings)widget.OpenSettings();else widget.Refresh();}
- public void Arrange(){var windows=Store.Book.Notes.Where(n=>!n.Deleted&&n.Area==Store.Book.ActiveArea).Select(Get).ToList();if(windows.Count==0)return;foreach(var w in windows)w.Present();var r=NoteWindow.WorkArea(windows[0]);int cols=Math.Max(1,(int)((r.Width-24)/344));int rows=Math.Max(1,(int)((r.Height-24)/340));int capacity=cols*rows;for(int i=0;i<windows.Count;i++){var w=windows[i];int slot=i%capacity,page=i/capacity;w.Width=Math.Min(344,r.Width-16);w.Height=Math.Min(360,(r.Height-24)/rows-8);w.Left=r.Left+12+(slot%cols)*((r.Width-24)/cols)+Math.Min(page*12,36);w.Top=r.Top+12+(slot/cols)*((r.Height-24)/rows)+Math.Min(page*12,36);w.Note.Left=w.Left;w.Note.Top=w.Top;w.Note.Width=w.Width;w.Note.Height=w.Height;w.FitToScreen();w.Save();}Store.Save();}
+ public void Arrange(){
+  if(!FlushAll())return;
+  var windows=Store.Book.Notes.Where(n=>!n.Deleted&&n.Area==Store.Book.ActiveArea).Select(Get).ToList();
+  foreach(var w in windows)new System.Windows.Interop.WindowInteropHelper(w).EnsureHandle();
+  var placements=new List<(NoteWindow Window,Rect Bounds)>();
+  foreach(var group in windows.GroupBy(w=>NoteWindow.WorkArea(w))){
+   var ordered=group.OrderByDescending(w=>w.Left).ThenBy(w=>w.Top).ThenBy(w=>w.Note.Id,StringComparer.Ordinal).ToList();
+   if(ordered.Count>1&&ordered.Max(w=>w.Left)-ordered.Min(w=>w.Left)<=24)ordered=ordered.OrderBy(w=>w.Top).ThenBy(w=>w.Note.Id,StringComparer.Ordinal).ToList();
+   var plan=NoteArrangement.Plan(group.Key,ordered.Select(w=>new Size(w.Width,w.Height)).ToArray());
+   if(plan==null){Visuals.Error("Não há espaço para organizar todas as notas sem sobreposição neste monitor. Mova algumas para outra área e tente novamente.");return;}
+   for(int i=0;i<ordered.Count;i++)placements.Add((ordered[i],plan[i]));
+  }
+  foreach(var item in placements){item.Window.Present();item.Window.Place(item.Bounds);if(!item.Window.Save())return;}
+  Store.Save();
+ }
+
  public bool FlushAll(){bool ok=true;foreach(var w in NoteWindows.Values)ok=w.Save()&&ok;return ok;}
  public void ExitApp(){if(!FlushAll()){Visuals.Error("Há alterações que não puderam ser salvas. Libere espaço ou verifique a pasta de dados e tente Ctrl+S antes de sair.");return;}Store.Save();Sync?.Dispose();Exiting=true;foreach(var w in NoteWindows.Values)w.Close();library?.Close();Shutdown();}
  public void ApplyTheme(){foreach(var w in NoteWindows.Values)w.ApplyColor();library?.Refresh();}

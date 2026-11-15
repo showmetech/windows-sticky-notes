@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.4.6
+# Windows Sticky Notes 1.4.7
+
+- Botão Auto-organizar com ícone no widget, menu da bandeja e atalho Ctrl+Shift+O.
+- Notas alinhadas à direita em colunas, com largura uniforme e espaçamento de 12 DIP; alturas preservadas quando couberem.
+- Organização respeita cada monitor e sua área útil, preserva o conteúdo e salva a posição. Se não houver espaço, mantém o arranjo anterior sem sobrepor notas.
+
+## Versão 1.4.6
 
 - Atualizações guardam o backup fora da pasta de programas e retiram ícones de versões antigas somente após confirmar sua cópia de segurança.
 - Instalação, atalhos e inicialização continuam usando um único caminho fixo.
