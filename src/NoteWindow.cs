@@ -17,6 +17,7 @@ using Forms=System.Windows.Forms;
 namespace StickyNotes;
 [Flags] internal enum NoteResizeEdge {Left=1,Top=2,Right=4,Bottom=8}
 public sealed class NoteWindow:Window {
+ internal const double CardMargin=4;
  public readonly Note Note;
  public readonly RichTextBox Editor=new();
  public readonly TextBox TitleBox;
@@ -28,7 +29,7 @@ public sealed class NoteWindow:Window {
  readonly Button pin;readonly Button colorButton;bool ready,dirty,disposed,placing,dragging,resizing,confirming;int visibilityGeneration;
  public NoteWindow(NotesApp app,Note note){this.app=app;Note=note;Visuals.Base(this,note.Width,note.Height);MinWidth=300;MinHeight=260;Title="Sticky Notes — "+note.Title;Topmost=note.Pinned;
   ShowInTaskbar=Environment.GetCommandLineArgs().Contains("--inspect");if(double.IsFinite(note.Left))Left=note.Left;if(double.IsFinite(note.Top))Top=note.Top;
-  var dark=Visuals.Dark(app.Store.Book.Theme);surface=Visuals.Surface(this,dark);surface.Padding=new Thickness(16,10,16,10);
+  var dark=Visuals.Dark(app.Store.Book.Theme);surface=Visuals.Surface(this,dark);surface.Margin=new Thickness(CardMargin);surface.Effect=new System.Windows.Media.Effects.DropShadowEffect{BlurRadius=8,ShadowDepth=1,Opacity=.18};surface.Padding=new Thickness(16,10,16,10);
   var layout=new Grid();foreach(var h in new[]{GridLength.Auto,GridLength.Auto,new GridLength(1,GridUnitType.Star),GridLength.Auto,GridLength.Auto})layout.RowDefinitions.Add(new(){Height=h});var frame=new Grid();frame.Children.Add(layout);surface.Child=frame;
   var head=new Grid{Height=38};head.ColumnDefinitions.Add(new());head.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
   var dragHandle=new Border{Background=Brushes.Transparent,Cursor=Cursors.SizeAll,ToolTip="Arraste esta faixa para mover a nota"};System.Windows.Automation.AutomationProperties.SetName(dragHandle,"Arrastar nota");

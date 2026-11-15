@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.4.7
+# Windows Sticky Notes 1.4.8
+
+- Painel de notas com ícones, busca com indicação visual, abas com seleção destacada e ações alinhadas em uma única faixa.
+- Preservada a lista de cartões coloridos com uma linha de título.
+- Auto-organização com intervalo visual de 10 DIP entre cartões, reduzindo também as margens transparentes das notas e ajustando suas sombras.
+
+## Versão 1.4.7
 
 - Botão Auto-organizar com ícone no widget, menu da bandeja e atalho Ctrl+Shift+O.
 - Notas alinhadas à direita em colunas, com largura uniforme e espaçamento de 12 DIP; alturas preservadas quando couberem.

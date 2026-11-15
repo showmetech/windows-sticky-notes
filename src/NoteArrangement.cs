@@ -7,7 +7,7 @@ namespace StickyNotes;
 
 // Pure layout calculation: no windows or saved notes change until every monitor fits.
 internal static class NoteArrangement {
- internal const double Gap=12;
+ internal const double Gap=2;
  internal static IReadOnlyList<Rect>? Plan(Rect work,IReadOnlyList<Size> sizes){
   if(sizes.Count==0)return Array.Empty<Rect>();
   if(work.IsEmpty||!double.IsFinite(work.Width)||!double.IsFinite(work.Height)||work.Width<=0||work.Height<=0)return null;
