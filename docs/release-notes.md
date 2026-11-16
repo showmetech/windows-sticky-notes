@@ -1,4 +1,11 @@
-# Windows Sticky Notes 1.4.9
+# Windows Sticky Notes 1.5.0
+
+- Estilo Fluent 2 nas notas, widget, configurações, paleta de cores e confirmação de exclusão.
+- Superfícies sólidas, tipografia Segoe UI Variable, cantos de 4/8/12 DIP e estados de interação consistentes.
+- Seleções usam a cor de destaque do Windows; foco de teclado visível sem reduzir o contraste do texto no hover.
+- Fundos 100% opacos por padrão; preservadas as 50 cores, posições, sincronização e alternância pela bandeja.
+
+## Versão 1.4.9
 
 - Clique no ícone da bandeja alterna entre ocultar todas as notas visíveis e mostrar todas as notas da área ativa.
 - Cliques rápidos respeitam o estado solicitado mesmo durante as animações. Conteúdo, tamanho e posição são preservados.
