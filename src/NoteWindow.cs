@@ -26,7 +26,8 @@ public sealed class NoteWindow:Window {
  readonly Border focusRing=new(){IsHitTestVisible=false,CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(3),Opacity=0,Margin=new Thickness(-16,-10,-16,-10)};
  readonly DispatcherTimer highlightTimer=new(){Interval=TimeSpan.FromSeconds(2.8)};
  internal bool HighlightVisible=>focusRing.Opacity>0;
- readonly Button pin;readonly Button colorButton;bool ready,dirty,disposed,placing,dragging,resizing,confirming;int visibilityGeneration;
+ internal bool IsPresented=>presentationRequested&&IsVisible&&WindowState!=WindowState.Minimized;
+ readonly Button pin;readonly Button colorButton;bool ready,dirty,disposed,placing,dragging,resizing,confirming,presentationRequested;int visibilityGeneration;
  public NoteWindow(NotesApp app,Note note){this.app=app;Note=note;Visuals.Base(this,note.Width,note.Height);MinWidth=300;MinHeight=260;Title="Sticky Notes — "+note.Title;Topmost=note.Pinned;
   ShowInTaskbar=Environment.GetCommandLineArgs().Contains("--inspect");if(double.IsFinite(note.Left))Left=note.Left;if(double.IsFinite(note.Top))Top=note.Top;
   var dark=Visuals.Dark(app.Store.Book.Theme);surface=Visuals.Surface(this,dark);surface.Margin=new Thickness(CardMargin);surface.Effect=new System.Windows.Media.Effects.DropShadowEffect{BlurRadius=8,ShadowDepth=1,Opacity=.18};surface.Padding=new Thickness(16,10,16,10);
@@ -72,8 +73,8 @@ public sealed class NoteWindow:Window {
   Left=accessible?savedLeft:Math.Clamp(double.IsFinite(savedLeft)?savedLeft:r.Right-Width-16,r.Left,r.Right-Width);Top=accessible?savedTop:Math.Clamp(double.IsFinite(savedTop)?savedTop:r.Top+32,r.Top,r.Bottom-Height);
  }finally{placing=false;}CapturePosition();
  }
- public void Present(){if(disposed)return;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
- public void Conceal(){if(confirming||!Save())return;StopHighlight();int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
+ public void Present(){if(disposed)return;presentationRequested=true;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
+ public void Conceal(){if(confirming||!Save())return;presentationRequested=false;StopHighlight();int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
  internal void Highlight(){
   if(disposed||!IsVisible)return;StopHighlight();
   var background=NoteColors.Surface(Note.Color,Note.ColorMode,Visuals.Dark(app.Store.Book.Theme));

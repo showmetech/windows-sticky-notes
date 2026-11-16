@@ -20,7 +20,7 @@ public sealed class NotesApp:Application {
  NativeTray? tray;WidgetWindow? library;EventWaitHandle? activation,quit;RegisteredWaitHandle? waiter,quitWaiter;Mutex? mutex;
  public string DataRoot="";
  internal bool TrayVisible=>tray?.Visible==true;
- internal void HandleTrayClick(){bool visible=library?.IsVisible==true;ShowNotes();EnsureWidget();if(visible)library!.Conceal();else library!.Present();}
+ internal void HandleTrayClick(){bool visible=NoteWindows.Values.Any(w=>w.IsPresented);library?.Conceal();if(visible)HideNotes();else ShowNotes();}
  internal WidgetWindow Widget=>EnsureWidget();
  WidgetWindow EnsureWidget(){if(library==null)library=new WidgetWindow(this);return library;}
  public static string DefaultRoot=>Distribution.IsPackaged?Path.Combine(global::Windows.Storage.ApplicationData.Current.LocalFolder.Path,"notes"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bruno","WindowsStickyNotes");

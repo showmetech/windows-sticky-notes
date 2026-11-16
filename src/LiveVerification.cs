@@ -71,10 +71,21 @@ internal sealed class LiveVerification {
   case 8:
    Check("Recollecting widget preserves visible desktop notes",!app.Widget.IsVisible&&app.NoteWindows.Values.All(w=>w.IsVisible));app.HandleTrayClick();break;
   case 9:
-   Check("Tray handler opens widget and saved notes together",app.Widget.IsVisible&&app.NoteWindows.Values.All(w=>w.IsVisible));
+   Check("Tray click hides every visible note",!app.Widget.IsVisible&&app.NoteWindows.Values.All(w=>!w.IsVisible&&!w.IsPresented));
+   var trayGeometry=app.NoteWindows.Values.ToDictionary(w=>w.Note.Id,w=>new Rect(w.Left,w.Top,w.Width,w.Height));var trayText=app.NoteWindows.Values.ToDictionary(w=>w.Note.Id,w=>new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text);
+   app.HandleTrayClick();Check("Next tray click restores every saved note",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
+   Check("Tray click controls notes without opening the widget",!app.Widget.IsVisible);
+   app.NoteWindows.Values.First().Conceal();app.HandleTrayClick();Check("Mixed visible and hidden notes are all hidden by one tray click",app.NoteWindows.Values.All(w=>!w.IsPresented));app.HandleTrayClick();
+   for(int tap=0;tap<6;tap++)app.HandleTrayClick();Check("Rapid tray clicks alternate correctly during fade animations",app.NoteWindows.Values.All(w=>w.IsPresented));
+   Check("Tray toggling preserves content and note geometry",app.NoteWindows.Values.All(w=>trayGeometry[w.Note.Id]==new Rect(w.Left,w.Top,w.Width,w.Height)&&trayText[w.Note.Id]==new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text));
+   phase=90;break;
+  case 90:
+   Check("Rapid click result remains visible after animations complete",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
+   foreach(var noteWindow in app.NoteWindows.Values)noteWindow.WindowState=WindowState.Minimized;app.HandleTrayClick();Check("Tray click also restores windows minimized by Windows",app.NoteWindows.Values.All(w=>w.WindowState==WindowState.Normal&&w.IsPresented));
+   app.Widget.Present();
    var tiles=app.Widget.NoteTiles;
    Check("Widget has one compact single-line button per note with exact saved color and readable title",tiles.Length==3&&tiles.All(tile=>{var n=app.Store.Book.Notes.Single(n=>n.Id==(string)tile.Tag);return tile.Content is TextBlock text&&text.Text==n.Title&&text.TextWrapping==TextWrapping.NoWrap&&text.TextTrimming==TextTrimming.CharacterEllipsis&&tile.Height==46&&(SystemParameters.HighContrast||tile.Background is SolidColorBrush brush&&brush.Color==(Color)ColorConverter.ConvertFromString(n.Color)&&tile.Foreground is SolidColorBrush ink&&NoteColors.Contrast(brush.Color,ink.Color)>=4.5);}));
-   app.HideNotes();break;
+   app.HideNotes();phase=10;break;
   case 10:
    Check("Notes concealed before tile activation",app.NoteWindows.Values.All(w=>!w.IsVisible));
    app.Widget.NoteTiles[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));break;

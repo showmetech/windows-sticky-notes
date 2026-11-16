@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.4.8
+# Windows Sticky Notes 1.4.9
+
+- Clique no ícone da bandeja alterna entre ocultar todas as notas visíveis e mostrar todas as notas da área ativa.
+- Cliques rápidos respeitam o estado solicitado mesmo durante as animações. Conteúdo, tamanho e posição são preservados.
+- Widget e configurações continuam disponíveis pelo menu do ícone, com o botão direito.
+
+## Versão 1.4.8
 
 - Painel de notas com ícones, busca com indicação visual, abas com seleção destacada e ações alinhadas em uma única faixa.
 - Preservada a lista de cartões coloridos com uma linha de título.
