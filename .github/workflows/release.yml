@@ -42,9 +42,15 @@ jobs:
           }
       - name: Build x64 and ARM64 and test isolated data
         run: |
+          python scripts/test-public-audit.py
+          if ($LASTEXITCODE) { throw 'Privacy guard tests failed' }
           python scripts/check-text.py
           if ($LASTEXITCODE) { throw 'Text encoding validation failed' }
           python scripts/release.py build
+      - name: Test per-user installation, rollback and cleanup with isolated registry
+        run: ./scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-verification.json
+      - name: Verify deployment with inbox Windows PowerShell 5.1
+        run: powershell.exe -NoProfile -File scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-powershell51.json
       - name: Restore official Microsoft packaging tools
         run: dotnet restore tools/Packaging/Packaging.csproj
       - name: Validate both MSIX packages with a separate test-only identity

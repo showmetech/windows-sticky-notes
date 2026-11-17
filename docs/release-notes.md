@@ -1,4 +1,12 @@
-# Windows Sticky Notes 1.5.1
+# Windows Sticky Notes 1.5.2
+
+- Instalação preparada e verificada antes de substituir a versão ativa, com backup e reversão em falhas. Atualizações preservam a escolha de início automático.
+- Atalhos e registros de terceiros são preservados; a desinstalação retira a configuração pública Google e somente o próprio histórico de bandeja, com backup.
+- Reconexão Google disponível após sessão inválida ou copiada de outro usuário do Windows, sem apagar a sessão anterior nem as notas.
+- Índices locais inválidos recuperam backup preservando o original; sequência de cores inválida não bloqueia a criação de notas.
+- Verificações de privacidade dos pacotes e testes de instalação isolada integrados ao CI. Scripts compatíveis com perfis com espaços e acentos.
+
+## Versão 1.5.1
 
 - Notas sem Fixar se recolhem quando o foco sai do app para outra janela ou para a área de trabalho.
 - Notas fixadas continuam visíveis. Editar outra nota, abrir menus, paletas e diálogos do app não recolhe as notas.

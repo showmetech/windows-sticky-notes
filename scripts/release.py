@@ -57,6 +57,8 @@ def build():
         shutil.copytree(output,dist/'app',dirs_exist_ok=True)
         for name in ('Install.ps1','Uninstall.ps1','README.md','PRIVACY.md'):
             shutil.copy2(ROOT/name,dist/name)
+        reject_private_files(dist)
+        run(sys.executable,ROOT/"scripts"/"check-distribution.py",dist)
         shutil.make_archive(str(ARTIFACTS/f'Windows-Sticky-Notes-{version()}-{arch}'),'zip',dist)
     write_hashes()
 
@@ -108,6 +110,7 @@ def msix(test=False):
         reject_private_files(source)
         run('dotnet','run','--project',ROOT/'tools'/'StoreAssets','-c','Release','--',ROOT/'src'/'Assets'/'Notes.png',source/'StoreAssets')
         manifest(config,arch,source/'AppxManifest.xml')
+        run(sys.executable,ROOT/'scripts'/'check-distribution.py',source)
         run(makeappx,'pack','/d',source,'/p',bundle/f'StickyNotes-{arch}.msix','/o')
     package=destination/f'Windows-Sticky-Notes-{version()}.msixbundle'
     run(makeappx,'bundle','/d',bundle,'/p',package,'/o')

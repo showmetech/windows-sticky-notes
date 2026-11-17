@@ -1,67 +1,68 @@
-param([switch]$NoLaunch,[switch]$DesktopShortcut)
-$ErrorActionPreference = 'Stop'
-$source = Join-Path $PSScriptRoot 'app'
-$target = Join-Path $env:LOCALAPPDATA 'Programs\WindowsStickyNotes'
-$exe = Join-Path $target 'WindowsStickyNotes.exe'
-$osArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
-$buildInfo = Get-Content -Raw (Join-Path $source 'build-info.json') | ConvertFrom-Json
-if ($osArch -eq 'Arm64' -and $buildInfo.architecture -ne 'arm64') { throw 'Use o pacote ARM64 neste computador.' }
-if ($osArch -eq 'X64' -and $buildInfo.architecture -ne 'x64') { throw 'Use o pacote x64 neste computador.' }
-if ([Environment]::OSVersion.Version.Build -lt 22000) { throw 'Este aplicativo requer Windows 11.' }
-if (!(Test-Path -LiteralPath (Join-Path $source 'WindowsStickyNotes.exe'))) { throw 'O pacote está incompleto. Extraia o ZIP inteiro antes de instalar.' }
-if (Test-Path -LiteralPath $exe) {
-    Start-Process -FilePath $exe -ArgumentList '--quit' -WindowStyle Hidden -Wait
-    $running = Get-Process WindowsStickyNotes -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe }
-    foreach ($process in $running) { Wait-Process -Id $process.Id -Timeout 12 -ErrorAction Stop }
-    $backupRoot = Join-Path $env:LOCALAPPDATA 'Bruno\WindowsStickyNotes-backups'
-    New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
-    $backup = Join-Path $backupRoot ((Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N'))
-    Copy-Item -LiteralPath $target -Destination $backup -Recurse
+﻿param([switch]$NoLaunch,[switch]$DesktopShortcut)
+$ErrorActionPreference='Stop'
+$source=Join-Path $PSScriptRoot 'app'
+$target=[IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\WindowsStickyNotes'))
+$exe=Join-Path $target 'WindowsStickyNotes.exe'
+$run='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+$uninstall='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WindowsStickyNotes'
+$buildInfo=Get-Content -LiteralPath (Join-Path $source 'build-info.json') -Raw | ConvertFrom-Json
+$osArch=[System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+if($osArch -notin @('X64','Arm64')){throw 'Arquitetura não suportada. Use Windows 11 x64 ou ARM64.'}
+if($buildInfo.architecture -ne $osArch.ToLowerInvariant()){throw ('Use o pacote '+$osArch+' neste computador.')}
+if([Environment]::OSVersion.Version.Build -lt 22000){throw 'Este aplicativo requer Windows 11.'}
+if($buildInfo.version -notmatch '^\d+\.\d+\.\d+$'){throw 'Versão inválida no pacote.'}
+$iconRelative='Assets\Notes-'+$buildInfo.version+'.ico'
+foreach($name in @('WindowsStickyNotes.exe','Assets\Notes.ico',$iconRelative)) {if(!(Test-Path -LiteralPath (Join-Path $source $name) -PathType Leaf)){throw 'Pacote incompleto. Extraia o ZIP inteiro antes de instalar.'}}
+$shell=New-Object -ComObject WScript.Shell
+$shortcutPath=Join-Path ([Environment]::GetFolderPath('Programs')) 'Windows Sticky Notes.lnk'
+$desktopPath=Join-Path ([Environment]::GetFolderPath('Desktop')) 'Windows Sticky Notes.lnk'
+$links=@($shortcutPath);if($DesktopShortcut -or (Test-Path -LiteralPath $desktopPath)){$links+=$desktopPath}
+foreach($link in $links){if((Test-Path -LiteralPath $link) -and $shell.CreateShortcut($link).TargetPath -ne $exe){throw ('Atalho de outro aplicativo preservado: '+$link)}}
+if((Test-Path -LiteralPath $uninstall) -and (Get-ItemProperty -LiteralPath $uninstall).InstallLocation -ne $target){throw 'Registro de instalação de outro aplicativo preservado.'}
+$hadInstallation=Test-Path -LiteralPath $exe
+$oldRun=(Get-ItemProperty -LiteralPath $run -Name WindowsStickyNotes -ErrorAction SilentlyContinue).WindowsStickyNotes
+$startup=if($hadInstallation){$oldRun -eq ('"'+$exe+'" --startup')}else{$true}
+if($oldRun -and $oldRun -ne ('"'+$exe+'" --startup')){throw 'Entrada de inicialização diferente preservada. Confira a instalação anterior.'}
+$ticket=[Guid]::NewGuid().ToString('N')
+$backupRoot=[IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Bruno\WindowsStickyNotes-backups'))
+$backup=Join-Path $backupRoot ((Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+$ticket)
+$stage=$target+'.staging-'+$ticket
+if([IO.Path]::GetDirectoryName($stage) -ne [IO.Path]::GetDirectoryName($target) -or [IO.Path]::GetFileName($stage) -notmatch '^WindowsStickyNotes\.staging-[a-f0-9]{32}$'){throw 'Pasta temporária inválida.'}
+New-Item -ItemType Directory -Path $backup -Force|Out-Null
+$oldRegistration=if(Test-Path -LiteralPath $uninstall){Get-ItemProperty -LiteralPath $uninstall}else{$null}
+$linkBackups=@{}
+$linksWritten=@()
+$movedOld=$false;$activated=$false
+try{
+ New-Item -ItemType Directory -Path $stage|Out-Null
+ foreach($link in $links){if(Test-Path -LiteralPath $link){$saved=Join-Path $backup ('shortcut-'+$linkBackups.Count+'.lnk');Copy-Item -LiteralPath $link -Destination $saved;$linkBackups[$link]=$saved}}
+ Copy-Item -Path (Join-Path $source '*') -Destination $stage -Recurse -Force
+ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Uninstall.ps1') -Destination (Join-Path $stage 'Uninstall.ps1')
+ foreach($file in Get-ChildItem -LiteralPath $source -File -Recurse){$relative=$file.FullName.Substring($source.Length).TrimStart('\');if((Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath (Join-Path $stage $relative)).Hash){throw 'Falha ao verificar o pacote preparado.'}}
+ if($hadInstallation){Start-Process -FilePath $exe -ArgumentList '--quit' -WindowStyle Hidden -Wait;foreach($process in @(Get-Process WindowsStickyNotes -ErrorAction SilentlyContinue|Where-Object Path -eq $exe)){Wait-Process -Id $process.Id -Timeout 15 -ErrorAction Stop}}
+ if(Test-Path -LiteralPath $target){Move-Item -LiteralPath $target -Destination (Join-Path $backup 'app');$movedOld=$true}
+ Move-Item -LiteralPath $stage -Destination $target;$activated=$true
+ New-Item -Path $run -Force|Out-Null
+ if($startup){Set-ItemProperty -LiteralPath $run -Name WindowsStickyNotes -Value ('"'+$exe+'" --startup')}else{Remove-ItemProperty -LiteralPath $run -Name WindowsStickyNotes -ErrorAction SilentlyContinue}
+ $icon=Join-Path $target $iconRelative
+ foreach($link in $links){$linksWritten+=$link;$shortcut=$shell.CreateShortcut($link);$shortcut.TargetPath=$exe;$shortcut.WorkingDirectory=$target;$shortcut.IconLocation=$icon+',0';$shortcut.Description='Notas coloridas na área de trabalho. Acesso pela bandeja do Windows.';$shortcut.Save()}
+ New-Item -Path $uninstall -Force|Out-Null
+ $properties=@{DisplayName='Windows Sticky Notes';DisplayVersion=$buildInfo.version;Publisher='Bruno Ayres Martinez';InstallLocation=$target;DisplayIcon=$icon;UninstallString=('powershell.exe -NoProfile -File "'+(Join-Path $target 'Uninstall.ps1')+'"')}
+ foreach($key in $properties.Keys){Set-ItemProperty -LiteralPath $uninstall -Name $key -Value $properties[$key]}
+ Set-ItemProperty -LiteralPath $uninstall -Name NoModify -Value 1 -Type DWord
+ Set-ItemProperty -LiteralPath $uninstall -Name NoRepair -Value 1 -Type DWord
+ if(!$NoLaunch){$started=Start-Process -FilePath $exe -ArgumentList '--startup' -WindowStyle Hidden -PassThru;Start-Sleep -Milliseconds 1200;if($started.HasExited -and !(Get-Process WindowsStickyNotes -ErrorAction SilentlyContinue|Where-Object Path -eq $exe)){throw 'O aplicativo não iniciou. Restaurando instalação anterior.'}}
+ Write-Output ('Instalado em: '+$target)
+ Write-Output ('Inicialização automática: '+$startup+'. Dados e preferências existentes preservados.')
+}catch{
+ $failure=$_
+ if($activated){if(Get-Process WindowsStickyNotes -ErrorAction SilentlyContinue|Where-Object Path -eq $exe){Start-Process -FilePath $exe -ArgumentList '--quit' -WindowStyle Hidden -Wait};Move-Item -LiteralPath $target -Destination (Join-Path $backup 'failed-app')}
+ if($movedOld){Move-Item -LiteralPath (Join-Path $backup 'app') -Destination $target}
+ if($oldRun){Set-ItemProperty -LiteralPath $run -Name WindowsStickyNotes -Value $oldRun}else{Remove-ItemProperty -LiteralPath $run -Name WindowsStickyNotes -ErrorAction SilentlyContinue}
+ foreach($link in $linksWritten){if($linkBackups.ContainsKey($link)){Copy-Item -LiteralPath $linkBackups[$link] -Destination $link -Force}elseif((Test-Path -LiteralPath $link) -and $shell.CreateShortcut($link).TargetPath -eq $exe){Remove-Item -LiteralPath $link}}
+ if($oldRegistration){New-Item -Path $uninstall -Force|Out-Null;foreach($name in (Get-Item -LiteralPath $uninstall).GetValueNames()){if($oldRegistration.PSObject.Properties.Name -notcontains $name){Remove-ItemProperty -LiteralPath $uninstall -Name $name}};foreach($property in $oldRegistration.PSObject.Properties|Where-Object Name -NotLike 'PS*'){Set-ItemProperty -LiteralPath $uninstall -Name $property.Name -Value $property.Value}}elseif(Test-Path -LiteralPath $uninstall){Remove-Item -LiteralPath $uninstall}
+ if($hadInstallation -and !$NoLaunch -and (Test-Path -LiteralPath $exe)){Start-Process -FilePath $exe -ArgumentList '--startup' -WindowStyle Hidden}
+ throw $failure
+}finally{
+ if(Test-Path -LiteralPath $stage){if([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($stage)) -eq [IO.Path]::GetDirectoryName($target) -and [IO.Path]::GetFileName($stage) -match '^WindowsStickyNotes\.staging-[a-f0-9]{32}$'){Remove-Item -LiteralPath $stage -Recurse -Force}}
 }
-New-Item -ItemType Directory -Path $target -Force | Out-Null
-Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Uninstall.ps1') -Destination (Join-Path $target 'Uninstall.ps1') -Force
-$run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-New-Item -Path $run -Force | Out-Null
-Set-ItemProperty -Path $run -Name 'WindowsStickyNotes' -Value ('"' + $exe + '" --startup')
-$shell = New-Object -ComObject WScript.Shell
-$shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'Windows Sticky Notes.lnk'
-$shortcut = $shell.CreateShortcut($shortcutPath)
-$shortcut.TargetPath = $exe
-$shortcut.WorkingDirectory = $target
-$iconPath = Join-Path $target ('Assets\Notes-'+$buildInfo.version+'.ico')
-$shortcut.IconLocation = $iconPath
-$shortcut.Description = 'Notas coloridas na área de trabalho. Acesso pela bandeja do Windows.'
-$shortcut.Save()
-$desktopPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Windows Sticky Notes.lnk'
-if ($DesktopShortcut -or (Test-Path -LiteralPath $desktopPath)) {
- if ((Test-Path -LiteralPath $desktopPath) -and $shell.CreateShortcut($desktopPath).TargetPath -ne $exe) { throw 'O atalho da área de trabalho com esse nome pertence a outro aplicativo. Ele foi preservado.' }
- $desktop = $shell.CreateShortcut($desktopPath)
- $desktop.TargetPath = $exe
- $desktop.WorkingDirectory = $target
- $desktop.IconLocation = $iconPath
- $desktop.Description = $shortcut.Description
- $desktop.Save()
-}
-$uninstall = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WindowsStickyNotes'
-New-Item -Path $uninstall -Force | Out-Null
-$properties = @{
- DisplayName='Windows Sticky Notes'; DisplayVersion=([System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion.Split('+')[0]); Publisher='Bruno Ayres Martinez';
- InstallLocation=$target; DisplayIcon=$iconPath;
- UninstallString=('powershell.exe -NoProfile -File "' + (Join-Path $target 'Uninstall.ps1') + '"')
-}
-foreach ($key in $properties.Keys) { Set-ItemProperty -Path $uninstall -Name $key -Value $properties[$key] }
-Set-ItemProperty -Path $uninstall -Name NoModify -Value 1 -Type DWord
-Set-ItemProperty -Path $uninstall -Name NoRepair -Value 1 -Type DWord
-# Retire only versioned icons already preserved in this installation backup.
-if ($backup) {
- $assets = Join-Path $target 'Assets'
- Get-ChildItem -LiteralPath $assets -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^Notes-\d+\.\d+\.\d+\.ico$' -and $_.FullName -ne $iconPath } | ForEach-Object {
-  $saved = Join-Path (Join-Path $backup 'Assets') $_.Name
-  if (!(Test-Path -LiteralPath $saved) -or (Get-FileHash -LiteralPath $saved).Hash -ne (Get-FileHash -LiteralPath $_.FullName).Hash) { throw 'O backup do ícone anterior não foi confirmado. Arquivo preservado.' }
-  Remove-Item -LiteralPath $_.FullName
- }
-}
-if (!$NoLaunch) { Start-Process -FilePath $exe -WindowStyle Hidden }
-Write-Output ('Instalado em: ' + $target)
-Write-Output 'Inicialização automática ativada. Notas e imagens são salvas em LocalAppData\Bruno\WindowsStickyNotes.'
