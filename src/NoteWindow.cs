@@ -73,7 +73,7 @@ public sealed class NoteWindow:Window {
   Left=accessible?savedLeft:Math.Clamp(double.IsFinite(savedLeft)?savedLeft:r.Right-Width-16,r.Left,r.Right-Width);Top=accessible?savedTop:Math.Clamp(double.IsFinite(savedTop)?savedTop:r.Top+32,r.Top,r.Bottom-Height);
  }finally{placing=false;}CapturePosition();
  }
- public void Present(){if(disposed)return;presentationRequested=true;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
+ public void Present(){if(disposed)return;app.AutoHide?.Hold();presentationRequested=true;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
  public void Conceal(){if(confirming||!Save())return;presentationRequested=false;StopHighlight();int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
  internal void Highlight(){
   if(disposed||!IsVisible)return;StopHighlight();

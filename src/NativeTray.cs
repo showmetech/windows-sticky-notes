@@ -39,6 +39,9 @@ internal sealed class NativeTray:IDisposable {
   if(Shell_NotifyIcon(1,ref data)){iconPath=file;DestroyIcon(previous);}else{icon=previous;DestroyIcon(next);}
  }
  public bool Visible=>!disposed;
+ internal bool PointerOver=>!disposed&&TryBounds(out var rect)&&GetCursorPos(out var point)&&point.X>=rect.Left&&point.X<rect.Right&&point.Y>=rect.Top&&point.Y<rect.Bottom;
+ [StructLayout(LayoutKind.Sequential)]struct CursorPoint{public int X,Y;}
+ [DllImport("user32.dll")]static extern bool GetCursorPos(out CursorPoint point);
  public bool TryBounds(out IconRect rect){var identity=new Identity{Size=(uint)Marshal.SizeOf<Identity>(),Window=source.Handle,Id=1,Guid=id};return Shell_NotifyIconGetRect(ref identity,out rect)==0;}
  public void Dispose(){if(disposed)return;disposed=true;var data=Create();Shell_NotifyIcon(2,ref data);source.RemoveHook(Hook);if(isolated)RemoveTestHistory();if(icon!=IntPtr.Zero){DestroyIcon(icon);icon=IntPtr.Zero;}}
  void RemoveTestHistory(){

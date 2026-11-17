@@ -15,6 +15,7 @@ namespace StickyNotes;
 public sealed class NotesApp:Application {
  public Store Store=null!;
  internal SyncController? Sync;
+ internal NoteAutoHide? AutoHide;
  public bool Exiting {get;private set;}
  public readonly Dictionary<string,NoteWindow> NoteWindows=new();
  NativeTray? tray;WidgetWindow? library;EventWaitHandle? activation,quit;RegisteredWaitHandle? waiter,quitWaiter;Mutex? mutex;
@@ -36,10 +37,11 @@ public sealed class NotesApp:Application {
   app.quit=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\BrunoStickyNotes-Quit-"+key);app.quitWaiter=ThreadPool.RegisterWaitForSingleObject(app.quit,(_,_)=>app.Dispatcher.BeginInvoke(app.ExitApp),null,Timeout.Infinite,false);
   app.Startup+=(_,_)=>{try{app.Start(args);}catch(Exception e){Visuals.Error("O aplicativo não pôde iniciar. Seus arquivos foram preservados.\n\n"+e.Message);app.Shutdown(1);}};
   app.DispatcherUnhandledException+=(_,e)=>{try{File.AppendAllText(Path.Combine(app.DataRoot,"errors.log"),DateTimeOffset.Now+" "+e.Exception+Environment.NewLine);}catch{}Visuals.Error("Não foi possível concluir a operação.\n"+e.Exception.Message);e.Handled=true;};
-  app.SessionEnding+=(_,e)=>{if(!app.FlushAll())e.Cancel=true;};app.Exit+=(_,_)=>{app.tray?.Dispose();app.waiter?.Unregister(null);app.quitWaiter?.Unregister(null);app.activation?.Dispose();app.quit?.Dispose();app.mutex?.Dispose();SystemEvents.DisplaySettingsChanged-=app.DisplaysChanged;SystemEvents.UserPreferenceChanged-=app.PreferencesChanged;};
+  app.SessionEnding+=(_,e)=>{if(!app.FlushAll())e.Cancel=true;};app.Exit+=(_,_)=>{app.AutoHide?.Dispose();app.tray?.Dispose();app.waiter?.Unregister(null);app.quitWaiter?.Unregister(null);app.activation?.Dispose();app.quit?.Dispose();app.mutex?.Dispose();SystemEvents.DisplaySettingsChanged-=app.DisplaysChanged;SystemEvents.UserPreferenceChanged-=app.PreferencesChanged;};
   return app.Run();
  }
  void Start(string[] args){Visuals.InstallResources();Store=new Store(DataRoot);var widget=EnsureWidget();var handle=new System.Windows.Interop.WindowInteropHelper(widget).EnsureHandle();Guid? trayIdentity=args.Contains("--data-dir")?new Guid(SHA256.HashData(Encoding.UTF8.GetBytes(DataRoot.ToUpperInvariant()))[..16]):null;tray=new NativeTray(System.Windows.Interop.HwndSource.FromHwnd(handle),Path.Combine(AppContext.BaseDirectory,"Assets","Notes.ico"),HandleTrayClick,widget.OpenTrayMenu,trayIdentity);
+  AutoHide=new NoteAutoHide(this,()=>tray?.PointerOver==true,!args.Contains("--verify-live")&&!args.Contains("--verify-google"));
   SystemEvents.DisplaySettingsChanged+=DisplaysChanged;SystemEvents.UserPreferenceChanged+=PreferencesChanged;
   if(args.Contains("--demo")&&Store.Book.Notes.Count==0)CreateDemo();
   if(Store.Book.Notes.Count==0){var n=Store.Create();n.Title="Sua mesa, suas ideias";var w=Get(n);w.Editor.Document.Blocks.Add(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("Escreva aqui. Cole uma imagem com Ctrl+V ou arraste um arquivo para dentro da nota.\n\nArraste a faixa superior para mover. O canto inferior direito ajusta o tamanho.\n\nTudo fica salvo neste computador.")));w.MarkDirty();w.Save();n.Welcome=true;Store.Save();}

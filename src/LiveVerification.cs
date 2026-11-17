@@ -82,7 +82,7 @@ internal sealed class LiveVerification {
   case 90:
    Check("Rapid click result remains visible after animations complete",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
    foreach(var noteWindow in app.NoteWindows.Values)noteWindow.WindowState=WindowState.Minimized;app.HandleTrayClick();Check("Tray click also restores windows minimized by Windows",app.NoteWindows.Values.All(w=>w.WindowState==WindowState.Normal&&w.IsPresented));
-   app.Widget.Present();
+   VerifyNoteAutoHide();app.Widget.Present();
    var tiles=app.Widget.NoteTiles;
    Check("Widget has one compact single-line button per note with exact saved color and readable title",tiles.Length==3&&tiles.All(tile=>{var n=app.Store.Book.Notes.Single(n=>n.Id==(string)tile.Tag);return tile.Content is TextBlock text&&text.Text==n.Title&&text.TextWrapping==TextWrapping.NoWrap&&text.TextTrimming==TextTrimming.CharacterEllipsis&&tile.Height==46&&(SystemParameters.HighContrast||tile.Background is SolidColorBrush brush&&brush.Color==(Color)ColorConverter.ConvertFromString(n.Color)&&tile.Foreground is SolidColorBrush ink&&NoteColors.Contrast(brush.Color,ink.Color)>=4.5);}));
    app.HideNotes();phase=10;break;
@@ -100,6 +100,21 @@ internal sealed class LiveVerification {
    Check("Highlight clears automatically while selected notes stay visible",app.NoteWindows.Values.All(w=>!w.HighlightVisible)&&app.NoteWindows.Values.Count(w=>w.IsVisible)==2);
    Check("Flush succeeds",app.FlushAll());timer.Stop();Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);CapturePreview();File.WriteAllText(report,JsonSerializer.Serialize(new{at=DateTimeOffset.Now,failed,checks,notes=app.NoteWindows.Values.Select(w=>new{w.Note.Title,w.Left,w.Top,w.Width,w.Height,w.ShowInTaskbar}),limitations="Tray restoration invoked through the same handler as the native left click; no physical tray click was automated. Physical monitor hot-unplug, ARM64 hardware and OS reboot were not tested. Preview PNGs render the real WPF window tree with fixture notes, not a screenshot of the desktop."},new JsonSerializerOptions{WriteIndented=true}));app.ExitApp();break;
  }}catch(Exception ex){timer.Stop();File.WriteAllText(report,ex.ToString());app.ExitApp();}}
+ void VerifyNoteAutoHide(){
+  var windows=app.NoteWindows.Values.ToArray();var focus=app.AutoHide!;var first=windows[0];var original=first.Note.Pinned;
+  var text=windows.ToDictionary(w=>w.Note.Id,w=>new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text);var geometry=windows.ToDictionary(w=>w.Note.Id,w=>new Rect(w.Left,w.Top,w.Width,w.Height));
+  first.Note.Pinned=true;first.Topmost=true;var own=new WindowInteropHelper(first).Handle;var outside=GetShellWindow();
+  focus.ObserveForeground(own);Check("Editing another Sticky Notes window keeps the group visible",windows.All(w=>w.IsPresented));
+  focus.ObserveForeground(IntPtr.Zero);Check("Transient missing foreground does not hide notes",windows.All(w=>w.IsPresented));
+  SuiteActivation.MenuOpen=true;focus.ObserveForeground(outside);SuiteActivation.MenuOpen=false;Check("Open tray menu protects unpinned notes",windows.All(w=>w.IsPresented));
+  focus.ObserveForeground(outside,true);Check("Pointer over this app's tray icon protects tray toggle ordering",windows.All(w=>w.IsPresented));
+  focus.ObserveForeground(outside);Check("Outside desktop focus hides every unpinned note and preserves pinned notes",first.IsPresented&&windows.Where(w=>w!=first).All(w=>!w.IsPresented));
+  app.HandleTrayClick();app.HandleTrayClick();Check("Tray restores all notes after outside-focus dismissal with a pinned note",windows.All(w=>w.IsPresented));
+  first.Note.Pinned=false;first.Topmost=false;focus.ObserveForeground(own);focus.ObserveForeground(outside);Check("Removing pin makes the note dismiss with the others",windows.All(w=>!w.IsPresented));
+  Check("Outside-focus dismissal preserves documents and geometry",windows.All(w=>text[w.Note.Id]==new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text&&geometry[w.Note.Id]==new Rect(w.Left,w.Top,w.Width,w.Height)));
+  first.Note.Pinned=original;first.Topmost=original;app.ShowNotes();
+ }
+ [DllImport("user32.dll")]static extern IntPtr GetShellWindow();
  void CaptureArrangementPreview(){
   var work=NoteWindow.WorkArea(app.NoteWindows.Values.First());double scale=Math.Min(1600/work.Width,1200/work.Height);
   var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(Visuals.Brush("#E9EDF3"),null,new Rect(0,0,work.Width*scale,work.Height*scale));dc.PushTransform(new ScaleTransform(scale,scale));foreach(var w in app.NoteWindows.Values){w.UpdateLayout();dc.DrawRectangle(new VisualBrush(w){Stretch=Stretch.Fill},null,new Rect(w.Left-work.Left,w.Top-work.Top,w.Width,w.Height));}dc.Pop();}

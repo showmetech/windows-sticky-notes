@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.5.0
+# Windows Sticky Notes 1.5.1
+
+- Notas sem Fixar se recolhem quando o foco sai do app para outra janela ou para a área de trabalho.
+- Notas fixadas continuam visíveis. Editar outra nota, abrir menus, paletas e diálogos do app não recolhe as notas.
+- Clique na bandeja continua alternando entre ocultar todas e mostrar as notas da área ativa. Documentos e posições preservados.
+
+## Versão 1.5.0
 
 - Estilo Fluent 2 nas notas, widget, configurações, paleta de cores e confirmação de exclusão.
 - Superfícies sólidas, tipografia Segoe UI Variable, cantos de 4/8/12 DIP e estados de interação consistentes.
