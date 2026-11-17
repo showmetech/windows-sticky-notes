@@ -9,6 +9,8 @@ $package=Join-Path $root 'Pacote de instalação'
 $programs=Join-Path $homePath 'Menu Iniciar';$desktop=Join-Path $homePath 'Área de Trabalho'
 $local=Join-Path $homePath 'Local';$target=Join-Path $local 'Programs\WindowsStickyNotes'
 $checks=@();$previousLocal=$env:LOCALAPPDATA
+$productionExe=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs\WindowsStickyNotes\WindowsStickyNotes.exe'
+$productionIds=@(Get-Process WindowsStickyNotes -ErrorAction SilentlyContinue|Where-Object Path -eq $productionExe|Select-Object -ExpandProperty Id)
 function Check([string]$Name,[bool]$Passed){$script:checks+=@{name=$Name;passed=$Passed};if(!$Passed){throw $Name}}
 try{
  foreach($path in @($package,$programs,$desktop,$local)){New-Item -ItemType Directory -Path $path -Force|Out-Null}
@@ -16,6 +18,9 @@ try{
  foreach($name in @('Install.ps1','Uninstall.ps1')){
   $text=[IO.File]::ReadAllText((Join-Path $repo $name))
   # Only the fixture copy redirects the Windows profile folders and registry hive.
+  $fixtureData=Join-Path $homePath 'fixture notes'
+  $quitArgs='-ArgumentList @(''--data-dir'',''"{0}"'',''--quit'')' -f $fixtureData.Replace("'","''")
+  $text=$text.Replace("-ArgumentList '--quit'",$quitArgs)
   $text=$text.Replace("[Environment]::GetFolderPath('Programs')",("'"+$programs.Replace("'","''")+"'")).Replace("[Environment]::GetFolderPath('Desktop')",("'"+$desktop.Replace("'","''")+"'")).Replace('HKCU:\',$registry+'\')
   [IO.File]::WriteAllText((Join-Path $package $name),$text,[Text.UTF8Encoding]::new($true))
  }
@@ -51,6 +56,7 @@ try{
  & (Join-Path $target 'Uninstall.ps1')|Out-Null
  Check 'Uninstall removes only its own tray history with a backup' (!(Test-Path -LiteralPath $ownTray) -and (Test-Path -LiteralPath $foreignTray) -and @(Get-ChildItem (Join-Path $local 'Bruno\WindowsStickyNotes-backups') -Filter 'tray-*.json').Count -eq 1)
  Check 'Uninstall removes its executable and Google app config' (!(Test-Path $exe) -and !(Test-Path (Join-Path $target 'Assets\google-oauth.json')))
+ Check 'Deployment tests preserve any running production instance' (@($productionIds|Where-Object{!(Get-Process -Id $_ -ErrorAction SilentlyContinue)}).Count -eq 0)
  Check 'Uninstall preserves user data and foreign shortcut' ((Get-FileHash $human).Hash -eq $noteHash -and (Test-Path $link) -and $shell.CreateShortcut($link).TargetPath -ne $exe)
 }finally{
  $env:LOCALAPPDATA=$previousLocal
