@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.5.2
+# Windows Sticky Notes 1.5.3
+
+- Preparação da primeira publicação Store como Showmetech Sticky Notes, com nome reservado e identidade oficial do produto.
+- Nome de exibição da Store configurável no empacotamento, sem vincular o aplicativo à conta pessoal do desenvolvedor.
+- A certificação e a disponibilidade pública dependem da Microsoft; cadastro e pacote não equivalem a publicação.
+
+## Versão 1.5.2
 
 - Instalação preparada e verificada antes de substituir a versão ativa, com backup e reversão em falhas. Atualizações preservam a escolha de início automático.
 - Atalhos e registros de terceiros são preservados; a desinstalação retira a configuração pública Google e somente o próprio histórico de bandeja, com backup.
