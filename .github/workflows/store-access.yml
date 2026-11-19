@@ -1,0 +1,58 @@
+name: Verify Microsoft Store publishing access
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: microsoft-store
+    steps:
+      - name: Authenticate and read only this product
+        env:
+          TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.error, urllib.parse, urllib.request
+          import uuid
+          try:
+              tenant = str(uuid.UUID(os.environ['TENANT_ID']))
+              client = str(uuid.UUID(os.environ['CLIENT_ID']))
+              product = os.environ['PRODUCT_ID']
+              secret = os.environ['CLIENT_SECRET']
+              if not secret or not re.fullmatch(r'[A-Z0-9]{12}', product):
+                  raise ValueError('Incomplete Store configuration')
+              body = urllib.parse.urlencode({
+                  'grant_type': 'client_credentials', 'client_id': client,
+                  'client_secret': secret, 'resource': 'https://manage.devcenter.microsoft.com'
+              }).encode()
+              request = urllib.request.Request(
+                  'https://login.microsoftonline.com/' + tenant + '/oauth2/token',
+                  data=body, headers={'Content-Type': 'application/x-www-form-urlencoded'}
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  token = json.load(response)['access_token']
+              request = urllib.request.Request(
+                  'https://manage.devcenter.microsoft.com/v1.0/my/applications/' + product,
+                  headers={'Authorization': 'Bearer ' + token}
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  app = json.load(response)
+              if app.get('id') != product:
+                  raise ValueError('Store returned another product')
+              result = {'productId': product, 'readAccessVerified': True,
+                        'submissionCreated': False, 'publicationVerified': False}
+              print(json.dumps(result))
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                  summary.write('Authenticated Store read verified for `' + product +
+                                '`. No submission or publication was performed.\n')
+          except urllib.error.HTTPError as error:
+              raise SystemExit('Store access check failed (HTTP ' + str(error.code) +
+                               '). Response bodies and credentials are not logged.')
+          except Exception:
+              raise SystemExit('Store access check failed. Check configuration and product permissions; no secret values are logged.')
+          PY
