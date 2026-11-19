@@ -20,6 +20,8 @@ O workflow `Build, test and publish` recebe somente commits revisados por tag ou
 
 `Verify Microsoft Store publishing access` faz somente autenticação e leitura do produto configurado. Um teste bem-sucedido não comprova permissão de envio, certificação, publicação ou atualização local. Não ampliar permissões silenciosamente se o teste for recusado.
 
+A API oficial de submissões exige o papel `Manager(Windows)` para a aplicação Microsoft Entra. Esse papel abrange os produtos Windows da conta; não é restrito a um único produto. Sua atribuição à integração exclusiva deste app requer autorização explícita do responsável. Os workflows deste repositório continuam direcionados ao `STORE_PRODUCT_ID` do Sticky Notes, e a chave de publicação não deve ser compartilhada com outros repositórios ou distribuída com o app.
+
 Manter `STORE_FIRST_PUBLICATION_COMPLETE` desabilitado até comprovar a primeira publicação pública. Depois, confirmar autenticação, envio do pacote exato e resultado da Microsoft em cada release. Não criar recibo fictício de publicação para liberar a atualização local.
 
 Referências oficiais:
