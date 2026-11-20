@@ -173,6 +173,10 @@ jobs:
           if ($package.Count -ne 1) { throw 'One official Store upload bundle is required' }
           msstore reconfigure --tenantId $env:TENANT_ID --sellerId $env:SELLER_ID --clientId $env:CLIENT_ID --clientSecret $env:CLIENT_SECRET
           if ($LASTEXITCODE) { throw 'Store authentication failed' }
-          msstore publish $package[0].DirectoryName -i $package[0].FullName -id $env:STORE_PRODUCT_ID
+          $publishHelp = msstore publish --help | Out-String
+          if ($publishHelp -match '--inputDirectory') { $inputPath = $package[0].DirectoryName }
+          elseif ($publishHelp -match '--inputFile') { $inputPath = $package[0].FullName }
+          else { throw 'Unsupported Store CLI input option; no submission attempted' }
+          msstore publish $package[0].DirectoryName -i $inputPath -id $env:STORE_PRODUCT_ID
           if ($LASTEXITCODE) { throw 'Store submission failed' }
           'Submitted to Microsoft. Public Store publication must be checked before desktop promotion.' >> $env:GITHUB_STEP_SUMMARY
