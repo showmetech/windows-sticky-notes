@@ -26,6 +26,12 @@ jobs:
       CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
       CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify submission safety guards
+        run: python scripts/test-store-submission.py
       - name: Download and verify the immutable published package
         shell: pwsh
         run: |
@@ -38,7 +44,6 @@ jobs:
           $hashLines = @(Get-Content store-package/SHA256.txt | Where-Object { $_ -match ('^[a-fA-F0-9]{64}  ' + [regex]::Escape($packageName) + '$') })
           if ($hashLines.Count -ne 1) { throw 'Expected one published package checksum' }
           if ((Get-FileHash (Join-Path store-package $packageName) -Algorithm SHA256).Hash -ne $hashLines[0].Substring(0,64)) { throw 'Published package checksum mismatch' }
-      - uses: microsoft/microsoft-store-apppublisher@v1.1
       - name: Submit the same verified release package
         shell: pwsh
         run: |
@@ -48,12 +53,6 @@ jobs:
           }
           $package = @(Get-ChildItem store-package -Filter '*.msixupload')
           if ($package.Count -ne 1) { throw 'Expected one official package' }
-          msstore reconfigure --tenantId $env:TENANT_ID --sellerId $env:SELLER_ID --clientId $env:CLIENT_ID --clientSecret $env:CLIENT_SECRET
-          if ($LASTEXITCODE) { throw 'Store authentication failed' }
-          $publishHelp = msstore publish --help | Out-String
-          if ($publishHelp -match '--inputDirectory') { $inputPath = $package[0].DirectoryName }
-          elseif ($publishHelp -match '--inputFile') { $inputPath = $package[0].FullName }
-          else { throw 'Unsupported Store CLI input option; no submission attempted' }
-          msstore publish $package[0].DirectoryName -i $inputPath -id $env:PRODUCT_ID
+          python scripts/submit-store.py --package $package[0].FullName --product $env:PRODUCT_ID
           if ($LASTEXITCODE) { throw 'Store submission failed' }
           "Submitted immutable release $env:TAG for product $env:PRODUCT_ID. Public certification must still be verified." >> $env:GITHUB_STEP_SUMMARY

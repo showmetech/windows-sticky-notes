@@ -24,6 +24,8 @@ A API oficial de submissões exige o papel `Manager(Windows)` para a aplicação
 
 Manter `STORE_FIRST_PUBLICATION_COMPLETE` desabilitado até comprovar a primeira publicação pública. Depois, confirmar autenticação, envio do pacote exato e resultado da Microsoft em cada release. Não criar recibo fictício de publicação para liberar a atualização local.
 
+O envio usa a API oficial de submissões e preserva preços, descrições e opções da última publicação. `Deliver existing release to Microsoft Store` permite reenviar o pacote de uma release existente, após conferir seu SHA-256, sem reconstruir ou substituir os binários públicos. Se houver outra submissão pendente, o envio para antes de alterá-la. Submissões criadas pela API devem continuar sendo editadas pela API; a interface do Partner Center serve para conferir seu estado.
+
 Referências oficiais:
 
 - https://learn.microsoft.com/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services
