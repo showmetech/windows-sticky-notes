@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.5.3
+# Windows Sticky Notes 1.5.4
+
+- Cada nota nova exibe sua cor original automaticamente, diferente das notas existentes, inclusive em outras áreas e após reiniciar o app.
+- Notas novas usam cores reais; notas existentes preservam a aparência e o estilo salvos.
+- Regressões cobrem 64 novas notas, temas claro e escuro, cores manuais e persistência.
+
+## Versão 1.5.3
 
 - Preparação da primeira publicação Store como Showmetech Sticky Notes, com nome reservado e identidade oficial do produto.
 - Nome de exibição da Store configurável no empacotamento, sem vincular o aplicativo à conta pessoal do desenvolvedor.
@@ -116,3 +122,4 @@
 - Exclusão recuperável e reversão do estado se a gravação falhar. Notas existentes preservam cores suaves, textos, imagens e posições.
 
 A publicação na Microsoft Store continua sujeita à aprovação do cadastro empresarial, identidade oficial, primeira submissão e certificação. Esta release no GitHub não comprova publicação na Store.
+
