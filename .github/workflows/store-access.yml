@@ -1,6 +1,9 @@
 name: Verify Microsoft Store publishing access
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/store-access.yml']
 permissions:
   contents: read
 jobs:
@@ -9,6 +12,7 @@ jobs:
     timeout-minutes: 5
     environment: microsoft-store
     steps:
+      - uses: actions/checkout@v4
       - name: Authenticate and read only this product
         env:
           TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
@@ -18,13 +22,13 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os, re, urllib.error, urllib.parse, urllib.request
-          import uuid
+          import uuid, xml.etree.ElementTree as ET
           try:
               tenant = str(uuid.UUID(os.environ['TENANT_ID']))
               client = str(uuid.UUID(os.environ['CLIENT_ID']))
               product = os.environ['PRODUCT_ID']
               secret = os.environ['CLIENT_SECRET']
-              if not secret or not re.fullmatch(r'[A-Z0-9]{12}', product):
+              if not secret or product != '9PN00KMTMDS1':
                   raise ValueError('Incomplete Store configuration')
               body = urllib.parse.urlencode({
                   'grant_type': 'client_credentials', 'client_id': client,
@@ -44,11 +48,35 @@ jobs:
                   app = json.load(response)
               if app.get('id') != product:
                   raise ValueError('Store returned another product')
-              result = {'productId': product, 'readAccessVerified': True,
-                        'submissionCreated': False, 'publicationVerified': False}
+              expected_version = ET.parse('src/WindowsStickyNotes.csproj').findtext('.//Version') + '.0'
+              def read_submission(reference):
+                  if not reference:
+                      return None
+                  submission_id = str(reference['id'])
+                  if not submission_id.isdecimal():
+                      raise ValueError('Invalid submission identifier')
+                  url = 'https://manage.devcenter.microsoft.com/v1.0/my/applications/' + product + '/submissions/' + submission_id
+                  def read(url):
+                      request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token})
+                      with urllib.request.urlopen(request, timeout=30) as response:
+                          return json.load(response)
+                  details = read(url)
+                  state = read(url + '/status')
+                  versions = sorted({p['version'] for p in details.get('applicationPackages', [])
+                                     if p.get('fileStatus') != 'PendingDelete' and re.fullmatch(r'\d+\.\d+\.\d+\.\d+', p.get('version') or '')})
+                  issue_codes = sorted({str(e.get('code', '')) for e in ((state.get('statusDetails') or {}).get('errors') or [])
+                                        if re.fullmatch(r'[A-Za-z][A-Za-z0-9_.-]{0,80}', str(e.get('code', '')))})
+                  return {'submissionId': submission_id, 'status': state.get('status'),
+                          'versions': versions, 'issueCodes': issue_codes,
+                          'matchesCurrentVersion': expected_version in versions}
+              published = read_submission(app.get('lastPublishedApplicationSubmission'))
+              pending = read_submission(app.get('pendingApplicationSubmission'))
+              result = {'productId': product, 'readAccessVerified': True, 'expectedVersion': expected_version,
+                        'submissionCreated': False, 'published': published, 'pending': pending,
+                        'publicationVerified': bool(published and published['status'] == 'Published' and published['matchesCurrentVersion'])}
               print(json.dumps(result))
               with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-                  summary.write('Authenticated Store read verified for `' + product +
+                  summary.write('Read-only Store status: `' + json.dumps(result) +
                                 '`. No submission or publication was performed.\n')
           except urllib.error.HTTPError as error:
               raise SystemExit('Store access check failed (HTTP ' + str(error.code) +
