@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$AppPath,[string]$Report)
+param([Parameter(Mandatory=$true)][string]$AppPath,[string]$Report)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $ticket=[Guid]::NewGuid().ToString('N')
@@ -53,7 +53,11 @@ try{
  foreach($key in @($ownTray,$foreignTray)){New-Item -Path $key -Force|Out-Null;Set-ItemProperty -LiteralPath $key -Name IconGuid -Value 'c2f81dae-61aa-46ce-a2a8-2dc643296760'}
  Set-ItemProperty -LiteralPath $ownTray -Name ExecutablePath -Value $exe
  Set-ItemProperty -LiteralPath $foreignTray -Name ExecutablePath -Value (Join-Path $env:WINDIR 'notepad.exe')
- & (Join-Path $target 'Uninstall.ps1')|Out-Null
+ # Run a self-removing uninstaller as a file in its own engine. The calling
+ # PowerShell must not try to resolve its deleted script path after it returns.
+ $engine=(Get-Process -Id $PID).Path
+ & $engine -NoProfile -File (Join-Path $target 'Uninstall.ps1')|Out-Null
+ if($LASTEXITCODE -ne 0){throw 'Isolated uninstaller failed'}
  Check 'Uninstall removes only its own tray history with a backup' (!(Test-Path -LiteralPath $ownTray) -and (Test-Path -LiteralPath $foreignTray) -and @(Get-ChildItem (Join-Path $local 'Bruno\WindowsStickyNotes-backups') -Filter 'tray-*.json').Count -eq 1)
  Check 'Uninstall removes its executable and Google app config' (!(Test-Path $exe) -and !(Test-Path (Join-Path $target 'Assets\google-oauth.json')))
  Check 'Deployment tests preserve any running production instance' (@($productionIds|Where-Object{!(Get-Process -Id $_ -ErrorAction SilentlyContinue)}).Count -eq 0)

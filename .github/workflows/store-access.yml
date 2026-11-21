@@ -13,6 +13,38 @@ jobs:
     environment: microsoft-store
     steps:
       - uses: actions/checkout@v4
+      - name: Verify the immutable release bundle identity and checksum
+        run: |
+          python3 - <<'PY'
+          import hashlib, io, json, os, re, urllib.request, zipfile
+          import xml.etree.ElementTree as ET
+          version = ET.parse('src/WindowsStickyNotes.csproj').findtext('.//Version')
+          if not re.fullmatch(r'\d+\.\d+\.\d+', version or ''):
+              raise SystemExit('Invalid app version')
+          name = 'Windows-Sticky-Notes-' + version + '.msixbundle'
+          base = 'https://github.com/showmetech/windows-sticky-notes/releases/download/v' + version + '/'
+          with urllib.request.urlopen(base + 'SHA256.txt', timeout=30) as response:
+              checksums = response.read().decode('utf-8').splitlines()
+          expected = [line.split()[0] for line in checksums if line.split()[1:] == [name]]
+          with urllib.request.urlopen(base + name, timeout=120) as response:
+              data = response.read()
+          if len(expected) != 1 or hashlib.sha256(data).hexdigest() != expected[0].lower():
+              raise SystemExit('Release checksum mismatch')
+          with zipfile.ZipFile(io.BytesIO(data)) as bundle:
+              manifest = ET.fromstring(bundle.read('AppxMetadata/AppxBundleManifest.xml'))
+              identity = manifest.find('{*}Identity')
+              if identity.get('Name') != 'Showmetech.ShowmetechStickyNotes' or identity.get('Publisher') != 'CN=FD7524DA-7205-4A8D-BD87-CB2B06495E9A':
+                  raise SystemExit('Unexpected release identity')
+              packages = manifest.findall('{*}Packages/{*}Package')
+              if {p.get('Architecture') for p in packages} != {'x64', 'arm64'} or any(p.get('Version') != version + '.0' for p in packages):
+                  raise SystemExit('Unexpected release architectures or app version')
+              bundle_version = identity.get('Version', '')
+              if not re.fullmatch(r'\d+\.\d+\.\d+\.\d+', bundle_version):
+                  raise SystemExit('Invalid bundle version')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('STORE_RELEASE_BUNDLE_VERSION=' + bundle_version + '\n')
+          print(json.dumps({'appVersion': version, 'bundleVersion': bundle_version, 'sha256': expected[0], 'architectures': ['x64', 'arm64']}))
+          PY
       - name: Authenticate and read only this product
         env:
           TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
@@ -49,6 +81,9 @@ jobs:
               if app.get('id') != product:
                   raise ValueError('Store returned another product')
               expected_version = ET.parse('src/WindowsStickyNotes.csproj').findtext('.//Version') + '.0'
+              expected_bundle_version = os.environ['STORE_RELEASE_BUNDLE_VERSION']
+              if not re.fullmatch(r'\d+\.\d+\.\d+\.\d+', expected_bundle_version):
+                  raise ValueError('Invalid verified release bundle version')
               def read_submission(reference):
                   if not reference:
                       return None
@@ -68,10 +103,11 @@ jobs:
                                         if re.fullmatch(r'[A-Za-z][A-Za-z0-9_.-]{0,80}', str(e.get('code', '')))})
                   return {'submissionId': submission_id, 'status': state.get('status'),
                           'versions': versions, 'issueCodes': issue_codes,
-                          'matchesCurrentVersion': expected_version in versions}
+                          'matchesCurrentVersion': expected_bundle_version in versions}
               published = read_submission(app.get('lastPublishedApplicationSubmission'))
               pending = read_submission(app.get('pendingApplicationSubmission'))
               result = {'productId': product, 'readAccessVerified': True, 'expectedVersion': expected_version,
+                        'expectedBundleVersion': expected_bundle_version,
                         'submissionCreated': False, 'published': published, 'pending': pending,
                         'publicationVerified': bool(published and published['status'] == 'Published' and published['matchesCurrentVersion'])}
               print(json.dumps(result))
