@@ -23,6 +23,8 @@ internal static class LayoutReview {
    try{
     Visuals.InstallResources();app.Sync=new SyncController(app);
     var widget=app.Widget;widget.ShowActivated=false;widget.Show();
+    Check("Cold widget fits native work area",LiveVerification.NativeWindowFits(widget),new{dpi=DisplayDpi.Scale(widget).DpiScaleX});
+    widget.OpenSettings();Check("Cold settings fit native work area",widget.SettingsPanel is {} cold&&LiveVerification.NativeWindowFits(cold),new{dpi=DisplayDpi.Scale(widget).DpiScaleX});widget.CloseSettings(false);
     foreach(string theme in new[]{"Claro","Escuro"}){
      app.Store.Book.Theme=theme;widget.Refresh();
      foreach(var size in new[]{new Size(360,400),new Size(360,320),new Size(300,320)}){

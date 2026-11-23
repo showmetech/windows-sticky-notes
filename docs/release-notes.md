@@ -1,4 +1,10 @@
-# SMT Sticky Notes 1.5.5
+# SMT Sticky Notes 1.5.6
+
+- Corrige a abertura inicial do widget e das configurações fora da tela em monitores com escala de 150%.
+- Usa o DPI nativo da janela antes da primeira exibição, preservando a área útil e a barra de tarefas.
+- Acrescenta regressões de primeira abertura em coordenadas físicas e conversão de escala, incluindo origens negativas.
+
+## SMT Sticky Notes 1.5.5
 
 - Nome SMT Sticky Notes no pacote do Windows, menu Iniciar, inicialização automática, bandeja, widget e configurações.
 - Identidade do pacote, GUID da bandeja e armazenamento permanecem estáveis para preservar notas e atualizações.
