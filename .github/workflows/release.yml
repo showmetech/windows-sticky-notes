@@ -52,7 +52,9 @@ jobs:
           if ($LASTEXITCODE) { throw 'Text encoding validation failed' }
           python scripts/release.py build
       - name: Test per-user installation, rollback and cleanup with isolated registry
-        run: ./scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-verification.json
+        run: |
+          ./scripts/test-clean-test-tray.ps1
+          ./scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-verification.json
       - name: Verify deployment with inbox Windows PowerShell 5.1
         run: powershell.exe -NoProfile -File scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-powershell51.json
       - name: Restore official Microsoft packaging tools

@@ -14,7 +14,11 @@ A distribuição ZIP do GitHub não possui atualizador automático integrado. A 
 
 Não instalar MSIX sem assinatura ou com identidade de teste como substituto do produto publicado. Não afirmar que atualizações automáticas estão ativas em uma instalação portátil. As atualizações Store dependem das configurações de atualização, rede e políticas do Windows.
 
-## Publicação
+## Verificação visual isolada
+
+Após coordenar acesso exclusivo à interface, usar `scripts/verify-installed-ui.ps1 -Executable CAMINHO_DO_EXE -WindowLeaseConfirmed`. O runner cria uma fixture nova, executa o verificador interno e, depois do encerramento, remove somente seu GUID temporário do histórico da bandeja com backup. Nunca usar `dotnet` como identidade pública nem apontar a fixture para dados pessoais. `scripts/test-clean-test-tray.ps1` verifica a limpeza em uma chave sintética, incluindo preservação da identidade de produção, caminhos de terceiros, processo ainda ativo e backups existentes. Verificações internas não substituem clique físico, inspeção visual de produção ou teste real de conta.
+
+## Publicação oficial
 
 O workflow `Build, test and publish` recebe somente commits revisados por tag ou acionamento explícito de release. As variáveis `STORE_*` contêm a identidade pública do produto. As credenciais de publicação ficam apenas nos segredos do ambiente/repositório, nunca nos executáveis, na fonte, nos artefatos ou nos dados das notas.
 
