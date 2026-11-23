@@ -1,4 +1,10 @@
-# Windows Sticky Notes 1.5.4
+# SMT Sticky Notes 1.5.5
+
+- Nome SMT Sticky Notes no pacote do Windows, menu Iniciar, inicialização automática, bandeja, widget e configurações.
+- Identidade do pacote, GUID da bandeja e armazenamento permanecem estáveis para preservar notas e atualizações.
+- O empacotamento não restaura mais o nome antigo quando uma variável de compilação está desatualizada; regressão verifica os manifestos x64 e ARM64.
+
+## Windows Sticky Notes 1.5.4
 
 - Cada nota nova exibe sua cor original automaticamente, diferente das notas existentes, inclusive em outras áreas e após reiniciar o app.
 - Notas novas usam cores reais; notas existentes preservam a aparência e o estilo salvos.

@@ -8,6 +8,7 @@ using Windows.ApplicationModel.Activation;
 
 namespace StickyNotes;
 internal static class Distribution {
+ public const string DisplayName="SMT Sticky Notes";
  public const string StartupTaskId="StickyNotesStartup";
  public static string Version=>typeof(NotesApp).Assembly.GetName().Version?.ToString(3)??"1.2.0";
  public static bool IsPackaged {get{uint n=0;return GetCurrentPackageFullName(ref n,IntPtr.Zero)!=15700;}}

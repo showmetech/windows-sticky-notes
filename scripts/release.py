@@ -67,7 +67,10 @@ def identity():
     value=json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else {
         'identityName':os.environ.get('STORE_IDENTITY_NAME',''), 'publisher':os.environ.get('STORE_PUBLISHER',''),
         'publisherDisplayName':os.environ.get('STORE_PUBLISHER_DISPLAY_NAME',''), 'productId':os.environ.get('STORE_PRODUCT_ID',''),
-        'displayName':os.environ.get('STORE_DISPLAY_NAME','Windows Sticky Notes')}
+        'displayName':'SMT Sticky Notes'}
+    # Public branding is versioned with the app, rather than an old repository
+    # variable silently restoring the former name on a future Store package.
+    value['displayName']='SMT Sticky Notes'
     missing=[key for key in ('identityName','publisher','publisherDisplayName','productId') if not value.get(key)]
     if missing: raise RuntimeError('Partner Center configuration missing: '+', '.join(missing))
     return value

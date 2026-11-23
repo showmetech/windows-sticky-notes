@@ -17,8 +17,8 @@ public sealed class WidgetWindow:Window {
  internal bool SearchHintVisible=>searchHint.Visibility==Visibility.Visible;
  internal void RefreshNotes()=>Render();
  internal void Refit()=>Fit();
- public WidgetWindow(NotesApp app){this.app=app;Title="Sticky Notes — Widget";Visuals.Base(this,360,600);ShowInTaskbar=Environment.GetCommandLineArgs().Contains("--inspect");surface=SuitePanels.Surface(this);var root=new DockPanel();surface.Child=root;
-  var title=Visuals.Label("Sticky Notes",20);title.FontWeight=FontWeights.SemiBold;config=Visuals.Icon("\uE713","Configurações",()=>{if(SettingsVisible)CloseSettings();else OpenSettings();});pin=Visuals.Icon("\uE718","Manter widget aberto",()=>{app.Store.Book.WidgetPinned=!app.Store.Book.WidgetPinned;app.Store.Save();Refresh();});var close=Visuals.Icon("\uE921","Recolher widget para a bandeja",Conceal);
+ public WidgetWindow(NotesApp app){this.app=app;Title=Distribution.DisplayName+" — Widget";Visuals.Base(this,360,600);ShowInTaskbar=Environment.GetCommandLineArgs().Contains("--inspect");surface=SuitePanels.Surface(this);var root=new DockPanel();surface.Child=root;
+  var title=Visuals.Label(Distribution.DisplayName,18);title.FontWeight=FontWeights.SemiBold;config=Visuals.Icon("\uE713","Configurações",()=>{if(SettingsVisible)CloseSettings();else OpenSettings();});pin=Visuals.Icon("\uE718","Manter widget aberto",()=>{app.Store.Book.WidgetPinned=!app.Store.Book.WidgetPinned;app.Store.Save();Refresh();});var close=Visuals.Icon("\uE921","Recolher widget para a bandeja",Conceal);
   var header=SuiteChrome.Header(title,Visuals.Icon("\uE710","Nova nota",()=>app.NewNote()),config,pin,close);DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);
   var footer=new Border{Height=8};DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
   var content=new StackPanel{Margin=new Thickness(20,0,20,0)};

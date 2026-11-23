@@ -46,6 +46,8 @@ jobs:
           if ($LASTEXITCODE) { throw 'Privacy guard tests failed' }
           python scripts/test-store-submission.py
           if ($LASTEXITCODE) { throw 'Store submission guard tests failed' }
+          python scripts/test-store-branding.py
+          if ($LASTEXITCODE) { throw 'Store naming and identity tests failed' }
           python scripts/check-text.py
           if ($LASTEXITCODE) { throw 'Text encoding validation failed' }
           python scripts/release.py build

@@ -2,7 +2,7 @@
 
 - Código e releases: https://github.com/showmetech/windows-sticky-notes
 - Microsoft Store: https://apps.microsoft.com/detail/9PN00KMTMDS1
-- Nome reservado: **Showmetech Sticky Notes**.
+- Nome público e reservado: **SMT Sticky Notes**. A identidade e a família abaixo permanecem estáveis para preservar atualizações e dados.
 - Identidade: `Showmetech.ShowmetechStickyNotes`.
 - Família: `Showmetech.ShowmetechStickyNotes_t8ppe5514qkcj`.
 

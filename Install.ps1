@@ -47,7 +47,7 @@ try{
  $icon=Join-Path $target $iconRelative
  foreach($link in $links){$linksWritten+=$link;$shortcut=$shell.CreateShortcut($link);$shortcut.TargetPath=$exe;$shortcut.WorkingDirectory=$target;$shortcut.IconLocation=$icon+',0';$shortcut.Description='Notas coloridas na área de trabalho. Acesso pela bandeja do Windows.';$shortcut.Save()}
  New-Item -Path $uninstall -Force|Out-Null
- $properties=@{DisplayName='Windows Sticky Notes';DisplayVersion=$buildInfo.version;Publisher='Bruno Ayres Martinez';InstallLocation=$target;DisplayIcon=$icon;UninstallString=('powershell.exe -NoProfile -File "'+(Join-Path $target 'Uninstall.ps1')+'"')}
+ $properties=@{DisplayName='SMT Sticky Notes';DisplayVersion=$buildInfo.version;Publisher='Showmetech';InstallLocation=$target;DisplayIcon=$icon;UninstallString=('powershell.exe -NoProfile -File "'+(Join-Path $target 'Uninstall.ps1')+'"')}
  foreach($key in $properties.Keys){Set-ItemProperty -LiteralPath $uninstall -Name $key -Value $properties[$key]}
  Set-ItemProperty -LiteralPath $uninstall -Name NoModify -Value 1 -Type DWord
  Set-ItemProperty -LiteralPath $uninstall -Name NoRepair -Value 1 -Type DWord

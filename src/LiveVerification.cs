@@ -41,6 +41,7 @@ internal sealed class LiveVerification {
    Check("Repeated auto-arrangement leaves the same windows aligned",arranged.Select((w,i)=>Math.Abs(w.Left-firstArrangement[i].Left)<.1&&Math.Abs(w.Top-firstArrangement[i].Top)<.1&&Math.Abs(w.Height-firstArrangement[i].Height)<.1).All(ok=>ok));
    CaptureArrangementPreview();app.Widget.Present();break;
   case 5:
+   Check("Widget uses the public SMT product name",app.Widget.Title==Distribution.DisplayName+" — Widget");
    Check("Suite widget header aligns settings, pin and close",SuiteChrome.Aligned(app.Widget));
    Check("Suite widget stays off taskbar",!app.Widget.ShowInTaskbar);
    Check("Three icon actions fit in one aligned row",app.Widget.PanelActionsAligned());
