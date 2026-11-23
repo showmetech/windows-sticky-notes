@@ -1,6 +1,7 @@
 # SMT Sticky Notes 1.5.6
 
 - Corrige a abertura inicial do widget e das configurações fora da tela em monitores com escala de 150%.
+- Corrige a inserção de imagens dentro de listas com marcadores, seções e células de tabelas, preservando texto e formatação.
 - Usa o DPI nativo da janela antes da primeira exibição, preservando a área útil e a barra de tarefas.
 - Acrescenta regressões de primeira abertura em coordenadas físicas e conversão de escala, incluindo origens negativas.
 
