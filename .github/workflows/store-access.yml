@@ -101,8 +101,20 @@ jobs:
                                      if p.get('fileStatus') != 'PendingDelete' and re.fullmatch(r'\d+\.\d+\.\d+\.\d+', p.get('version') or '')})
                   issue_codes = sorted({str(e.get('code', '')) for e in ((state.get('statusDetails') or {}).get('errors') or [])
                                         if re.fullmatch(r'[A-Za-z][A-Za-z0-9_.-]{0,80}', str(e.get('code', '')))})
+                  delivery = details.get('packageDeliveryOptions') or {}
+                  rollout = delivery.get('packageRollout') or {}
+                  enabled = rollout.get('isPackageRollout')
+                  percentage = rollout.get('packageRolloutPercentage')
+                  rollout_state = rollout.get('packageRolloutStatus')
+                  visibility = details.get('visibility')
+                  publish_mode = details.get('targetPublishMode')
                   return {'submissionId': submission_id, 'status': state.get('status'),
                           'versions': versions, 'issueCodes': issue_codes,
+                          'visibility': visibility if visibility in ('Hidden', 'Public', 'Private', 'NotSet') else None,
+                          'publishMode': publish_mode if publish_mode in ('Immediate', 'Manual', 'SpecificDate') else None,
+                          'rolloutEnabled': enabled if isinstance(enabled, bool) else None,
+                          'rolloutPercentage': percentage if type(percentage) in (int, float) and 0 <= percentage <= 100 else None,
+                          'rolloutStatus': rollout_state if rollout_state in ('PackageRolloutNotStarted', 'PackageRolloutInProgress', 'PackageRolloutComplete', 'PackageRolloutStopped') else None,
                           'matchesCurrentVersion': expected_bundle_version in versions}
               published = read_submission(app.get('lastPublishedApplicationSubmission'))
               pending = read_submission(app.get('pendingApplicationSubmission'))
