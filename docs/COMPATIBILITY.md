@@ -34,4 +34,10 @@ O CI compila x64/ARM64, valida semanticamente MSIX de teste e executa regressõe
 
 Isso não comprova funcionamento em todos os fabricantes, drivers, níveis de DPI ou políticas corporativas. Windows S Mode, antivírus, permissões negadas, restrições de scripts e rede podem bloquear recursos ou instalação. Não contorne esses controles; trate o diagnóstico concreto. Alto contraste, leitores de tela, alteração física de monitores, reinicialização e instalação do MSIX oficial precisam de evidência própria.
 
-A publicação, a instalação e a migração dos dados para o MSIX oficial permanecem pendentes até haver identidade real e certificação. Não instale uma versão Store em paralelo com a portátil sem planejar a continuidade dos dados e confirmar uma única instância/identidade ativa.
+Cada nova versão precisa de certificação própria antes de ser considerada disponível na Store. Não instale uma versão Store em paralelo com a portátil sem planejar a continuidade dos dados e confirmar uma única instância/identidade ativa.
+
+### Revisão isolada de layouts
+
+`tools/LayoutReview` compila os controles reais da fonte atual em um executável de QA, sem ícone de bandeja, conta conectada ou alterações de escala/resolução. A CI verifica 33 cenários: cinco abas, dois temas, painéis de 360×400, 360×320 e 300×320 DIP, além da confirmação de exclusão em três larguras, com título longo e Cancelar como padrão. O relatório pertence ao commit da execução; não é uma inspeção da instalação distribuída nem teste físico de teclado, mouse ou leitor de tela.
+
+O caso de 300 DIP é um teste de estresse: o Viewbox pode reduzir textos abaixo de 10 DIP. Isso não comprova legibilidade em telas extremas. A revisão visual nativa e a acessibilidade da instalação continuam exigindo evidência separada.

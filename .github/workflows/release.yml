@@ -55,6 +55,17 @@ jobs:
         run: |
           ./scripts/test-clean-test-tray.ps1
           ./scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-verification.json
+      - name: Review real WPF settings and confirmation layouts with isolated data
+        shell: pwsh
+        run: |
+          dotnet build tools/LayoutReview/LayoutReview.csproj -c Release -o .artifacts/layout-review --nologo
+          if ($LASTEXITCODE) { throw 'Layout review build failed' }
+          $report = Join-Path $PWD 'artifacts/layout-review.json'
+          $process = Start-Process -FilePath "$PWD/.artifacts/layout-review/LayoutReview.exe" -ArgumentList @(('"'+$report+'"'),'--self-test') -WindowStyle Hidden -PassThru
+          if (!$process.WaitForExit(60000)) { throw 'Isolated layout review timed out' }
+          if ($process.ExitCode -ne 0) { throw 'Layout review process failed' }
+          $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+          if ($result.failed -ne 0 -or $result.passed -ne 33) { throw 'Layout coverage incomplete or failed' }
       - name: Verify deployment with inbox Windows PowerShell 5.1
         run: powershell.exe -NoProfile -File scripts/test-deployment.ps1 -AppPath .artifacts/x64 -Report artifacts/deployment-powershell51.json
       - name: Restore official Microsoft packaging tools
