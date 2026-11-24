@@ -1,4 +1,10 @@
-# SMT Sticky Notes 1.5.6
+# SMT Sticky Notes 1.5.7
+
+- Mantém a cor da nota no título e no editor, inclusive ao passar o mouse ou digitar, sem preenchimento escuro adicional.
+- Remove fundos trazidos por textos colados ou documentos existentes, preservando texto, negrito, itálico, listas e imagens.
+- Enter confirma e salva o título e leva o foco para o conteúdo da nota, sem inserir uma quebra de linha.
+
+## SMT Sticky Notes 1.5.6
 
 - Corrige a abertura inicial do widget e das configurações fora da tela em monitores com escala de 150%.
 - Corrige a inserção de imagens dentro de listas com marcadores, seções e células de tabelas, preservando texto e formatação.
