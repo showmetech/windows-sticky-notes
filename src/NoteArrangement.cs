@@ -24,7 +24,7 @@ internal static class NoteArrangement {
   double scale=1;
   if(Required(scale)>columns){double low=0,high=1;for(int i=0;i<40;i++){double mid=(low+high)/2;if(Required(mid)<=columns)low=mid;else high=mid;}scale=low;}
   var result=new List<Rect>();int column=0;double y=0;
-  foreach(double original in heights){double h=Math.Max(minHeight,original*scale);if(y>0&&y+Gap+h>height+.0001){column++;y=0;}if(y>0)y+=Gap;result.Add(new Rect(work.Right-insetX-columnWidth-column*(columnWidth+Gap),work.Top+insetY+y,columnWidth,h));y+=h;}
+  foreach(double original in heights){double h=Math.Max(minHeight,original*scale);if(y>0&&y+Gap+h>height+.0001){column++;y=0;}if(y>0)y+=Gap;result.Add(new Rect(work.Right-insetX-columnWidth-column*(columnWidth+Gap),work.Bottom-insetY-y-h,columnWidth,h));y+=h;}
   return result;
  }
 }

@@ -1,4 +1,11 @@
-# SMT Sticky Notes 1.5.7
+# SMT Sticky Notes 1.5.8
+
+- Organiza as notas automaticamente na primeira exibição de cada área a cada execução do app, inclusive ao abrir pela bandeja após iniciar com o Windows.
+- Começa no canto inferior direito, empilha de baixo para cima e abre novas colunas à esquerda, mantendo o espaçamento compacto e a área útil de cada monitor.
+- Usa a mesma direção no botão Auto-organizar, sem inverter a ordem ao clicar novamente.
+- Mantém os ajustes manuais ao ocultar e mostrar as notas durante a mesma execução.
+
+## SMT Sticky Notes 1.5.7
 
 - Mantém a cor da nota no título e no editor, inclusive ao passar o mouse ou digitar, sem preenchimento escuro adicional.
 - Remove fundos trazidos por textos colados ou documentos existentes, preservando texto, negrito, itálico, listas e imagens.

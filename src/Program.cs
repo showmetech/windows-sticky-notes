@@ -18,6 +18,7 @@ public sealed class NotesApp:Application {
  internal NoteAutoHide? AutoHide;
  public bool Exiting {get;private set;}
  public readonly Dictionary<string,NoteWindow> NoteWindows=new();
+ readonly HashSet<string> arrangedAreas=new(StringComparer.Ordinal);
  NativeTray? tray;WidgetWindow? library;EventWaitHandle? activation,quit;RegisteredWaitHandle? waiter,quitWaiter;Mutex? mutex;
  public string DataRoot="";
  internal bool TrayVisible=>tray?.Visible==true;
@@ -53,27 +54,31 @@ public sealed class NotesApp:Application {
   int verify=Array.IndexOf(args,"--verify-live");if(verify>=0&&verify+1<args.Length){if(string.Equals(DataRoot,DefaultRoot,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Execute a verificação em uma pasta isolada.");LiveVerification.Start(this,args[verify+1]);}
  }
  NoteWindow Get(Note n){if(NoteWindows.TryGetValue(n.Id,out var w))return w;w=new NoteWindow(this,n);NoteWindows[n.Id]=w;return w;}
- public NoteWindow NewNote(){var n=Store.Create();var visible=NoteWindows.Values.Where(w=>w.IsVisible).ToList();if(visible.Count>0){var last=visible.Last();n.Left=last.Left+28;n.Top=last.Top+28;}var w=Get(n);w.Present();w.TitleBox.Focus();w.TitleBox.SelectAll();library?.Refresh();return w;}
- public void ShowNotes(){var notes=Store.Book.Notes.Where(n=>!n.Deleted&&n.Area==Store.Book.ActiveArea).ToList();foreach(var n in notes)Get(n).Present();if(notes.Count==0)ShowLibrary();}
- public void ShowNote(Note n){if(Store.Book.ActiveArea!=n.Area)SwitchArea(n.Area);if(Store.Book.ActiveArea!=n.Area)return;foreach(var other in NoteWindows.Values)other.StopHighlight();var window=Get(n);window.Present();window.Highlight();}
+ public NoteWindow NewNote(){var n=Store.Create();var visible=NoteWindows.Values.Where(w=>w.IsVisible).ToList();if(visible.Count>0){var last=visible.Last();n.Left=last.Left+28;n.Top=last.Top+28;}PrepareFirstNotePresentation();var w=Get(n);w.Present();w.TitleBox.Focus();w.TitleBox.SelectAll();library?.Refresh();return w;}
+ void PrepareFirstNotePresentation(){var area=Store.Book.ActiveArea;if(!arrangedAreas.Contains(area)&&Store.Book.Notes.Any(n=>!n.Deleted&&n.Area==area)&&ArrangeNotes(false))arrangedAreas.Add(area);}
+ public void ShowNotes(){var notes=Store.Book.Notes.Where(n=>!n.Deleted&&n.Area==Store.Book.ActiveArea).ToList();if(notes.Count==0){ShowLibrary();return;}PrepareFirstNotePresentation();foreach(var n in notes)Get(n).Present();}
+ public void ShowNote(Note n){if(Store.Book.ActiveArea!=n.Area)SwitchArea(n.Area);if(Store.Book.ActiveArea!=n.Area)return;PrepareFirstNotePresentation();foreach(var other in NoteWindows.Values)other.StopHighlight();var window=Get(n);window.Present();window.Highlight();}
  public void HideNotes(){foreach(var w in NoteWindows.Values)if(w.IsVisible)w.Conceal();}
  public void SwitchArea(string area){if(!FlushAll())return;HideNotes();Store.Book.ActiveArea=area;Store.Save();ShowNotes();}
  public void MoveNoteToArea(Note note,string area){if(!Store.Book.Areas.Contains(area)||note.Area==area||!FlushAll())return;string previous=note.Area;note.Area=area;try{Store.Save();}catch(Exception e){note.Area=previous;Visuals.Error("Não foi possível mover a nota. Ela foi preservada.\n"+e.Message);return;}if(area!=Store.Book.ActiveArea&&NoteWindows.TryGetValue(note.Id,out var window))window.Conceal();RefreshWidget();}
  public void ShowLibrary(bool settings=false){var widget=EnsureWidget();widget.Present();if(settings)widget.OpenSettings();else widget.Refresh();}
- public void Arrange(){
-  if(!FlushAll())return;
+ public void Arrange(){if(ArrangeNotes(true))arrangedAreas.Add(Store.Book.ActiveArea);}
+ bool ArrangeNotes(bool present){
+  if(!FlushAll())return false;
   var windows=Store.Book.Notes.Where(n=>!n.Deleted&&n.Area==Store.Book.ActiveArea).Select(Get).ToList();
   foreach(var w in windows)new System.Windows.Interop.WindowInteropHelper(w).EnsureHandle();
   var placements=new List<(NoteWindow Window,Rect Bounds)>();
   foreach(var group in windows.GroupBy(w=>NoteWindow.WorkArea(w))){
-   var ordered=group.OrderByDescending(w=>w.Left).ThenBy(w=>w.Top).ThenBy(w=>w.Note.Id,StringComparer.Ordinal).ToList();
-   if(ordered.Count>1&&ordered.Max(w=>w.Left)-ordered.Min(w=>w.Left)<=24)ordered=ordered.OrderBy(w=>w.Top).ThenBy(w=>w.Note.Id,StringComparer.Ordinal).ToList();
+   var ordered=group.OrderByDescending(w=>w.Left).ThenByDescending(w=>w.Top).ThenBy(w=>w.Note.Id,StringComparer.Ordinal).ToList();
+   if(ordered.Count>1&&ordered.Max(w=>w.Left)-ordered.Min(w=>w.Left)<=24)ordered=ordered.OrderByDescending(w=>w.Top).ThenBy(w=>w.Note.Id,StringComparer.Ordinal).ToList();
    var plan=NoteArrangement.Plan(group.Key,ordered.Select(w=>new Size(w.Width,w.Height)).ToArray());
-   if(plan==null){Visuals.Error("Não há espaço para organizar todas as notas sem sobreposição neste monitor. Mova algumas para outra área e tente novamente.");return;}
+   if(plan==null){Visuals.Error("Não há espaço para organizar todas as notas sem sobreposição neste monitor. Mova algumas para outra área e tente novamente.");return false;}
    for(int i=0;i<ordered.Count;i++)placements.Add((ordered[i],plan[i]));
   }
-  foreach(var item in placements){item.Window.Present();item.Window.Place(item.Bounds);if(!item.Window.Save())return;}
-  Store.Save();
+  // Place and save while hidden so first presentation never flashes a cascade.
+  foreach(var item in placements)item.Window.Place(item.Bounds);
+  foreach(var item in placements)if(!item.Window.Save())return false;
+  Store.Save();if(present)foreach(var item in placements)item.Window.Present();return true;
  }
 
  public bool FlushAll(){bool ok=true;foreach(var w in NoteWindows.Values)ok=w.Save()&&ok;return ok;}

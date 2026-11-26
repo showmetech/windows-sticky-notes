@@ -13,14 +13,16 @@ using System.Windows.Threading;
 namespace StickyNotes;
 internal sealed class LiveVerification {
  readonly NotesApp app;readonly string report;readonly List<object> checks=new();readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromMilliseconds(600)};int phase;int failed;
+ string? manuallyMovedId;Rect manuallyMovedBounds;
  LiveVerification(NotesApp app,string report){this.app=app;this.report=report;timer.Tick+=Tick;timer.Start();}
  public static void Start(NotesApp app,string report)=>_=new LiveVerification(app,report);
  void Check(string name,bool ok){checks.Add(new{name,passed=ok});if(!ok)failed++;}
  void Tick(object? sender,EventArgs e){try{switch(phase++){
   case 0:
+   if(!app.Widget.IsVisible)app.Widget.Present();
    Check("Cold first widget presentation stays inside the native monitor work area",app.Widget.IsVisible&&NativeWindowFits(app.Widget));
    app.Widget.OpenSettings();Check("Cold first settings presentation stays inside the native monitor work area",app.Widget.SettingsPanel is {} coldSettings&&NativeWindowFits(coldSettings));app.Widget.CloseSettings(false);
-   app.ShowNotes();Check("Native tray created",app.TrayVisible);Check("Exactly three fixture notes",app.NoteWindows.Count==3);break;
+   app.ShowNotes();Check("Native tray created",app.TrayVisible);Check("Exactly three fixture notes",app.NoteWindows.Count==3);Check("First note presentation automatically stacks bottom right without a cascade",BottomArranged());CaptureArrangementPreview("first-open-preview.png");break;
   case 1:
    var windows=app.NoteWindows.Values.ToList();Check("All notes visible",windows.All(w=>w.IsVisible));Check("Native windows absent from taskbar",windows.All(w=>!w.ShowInTaskbar&&(GetWindowLongPtr(new WindowInteropHelper(w).Handle,-20).ToInt64()&0x40000)==0));
    Check("Positions restored without collapsing into cascade",windows.Select(w=>(w.Left,w.Top)).Distinct().Count()==3);
@@ -28,14 +30,15 @@ internal sealed class LiveVerification {
    Check("Exactly six bottom actions stay aligned",windows.All(w=>w.BottomButtonsAligned()));Check("Four top actions show minimize with no legacy menu or passive labels",windows.All(w=>w.CompactChromeVisible()));var narrow=windows[0];double previousWidth=narrow.Width;narrow.Width=300;Check("Bottom actions fit and align at minimum note width",narrow.BottomButtonsAligned());Check("Four top actions remain visible at minimum note width",narrow.CompactChromeVisible());narrow.Width=previousWidth;
    Check("All four edges and four corners receive pointer hits with resize cursors",windows.All(w=>w.ResizeEdgesAvailable()));VerifyEdgeResizing(windows[0]);VerifyTitleCommit(windows[0]);
    var moved=windows[0];var area=NoteWindow.WorkArea(moved);double x=area.Left+93,y=area.Top+117;moved.Left=x;moved.Top=y;moved.Save();moved.FitToScreen();Check("Free placement is not snapped or reset",Math.Abs(moved.Left-x)<1&&Math.Abs(moved.Top-y)<1);moved.Save();var restored=new Store(app.DataRoot).Book.Notes.Single(n=>n.Id==moved.Note.Id);Check("Moved position survives reload",Math.Abs(restored.Left-x)<1&&Math.Abs(restored.Top-y)<1);
-   app.HideNotes();break;
+   manuallyMovedId=moved.Note.Id;manuallyMovedBounds=new Rect(moved.Left,moved.Top,moved.Width,moved.Height);app.HideNotes();break;
   case 2:Check("Hide animation finishes and keeps process alive",app.NoteWindows.Values.All(w=>!w.IsVisible));app.HandleTrayClick();break;
-  case 3:Check("Shared left-click handler restores saved notes",app.NoteWindows.Values.All(w=>w.IsVisible));var beforeContent=app.NoteWindows.Values.ToDictionary(w=>w.Note.Id,w=>new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text);
+  case 3:Check("Shared left-click handler restores saved notes",app.NoteWindows.Values.All(w=>w.IsVisible));var manual=app.NoteWindows[manuallyMovedId!];Check("Later tray restores preserve manual placement after the first automatic arrangement",manuallyMovedBounds==new Rect(manual.Left,manual.Top,manual.Width,manual.Height));var beforeContent=app.NoteWindows.Values.ToDictionary(w=>w.Note.Id,w=>new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text);
    app.Widget.AutoArrangeButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
    Check("Auto-arrange button invokes the real command and preserves note contents",app.NoteWindows.Values.All(w=>beforeContent[w.Note.Id]==new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text));break;
   case 4:
    Check("Auto-arrangement keeps notes on each monitor work area",app.NoteWindows.Values.All(w=>NoteWindow.WorkArea(w).Contains(new Rect(w.Left,w.Top,w.Width,w.Height))));
    var arranged=app.NoteWindows.Values.ToArray();
+   Check("Auto-arrange button uses the same bottom-right upward layout",BottomArranged());
    Check("Auto-arrangement has no overlapping windows",arranged.SelectMany((a,i)=>arranged.Skip(i+1).Select(b=>Rect.Intersect(new Rect(a.Left,a.Top,a.Width,a.Height),new Rect(b.Left,b.Top,b.Width,b.Height)))).All(r=>r.IsEmpty||r.Width==0||r.Height==0));
    Check("Organized visible cards have a compact ten DIP gap",arranged.GroupBy(w=>w.Left).All(group=>{var column=group.OrderBy(w=>w.Top).ToArray();return column.Skip(1).Select((next,i)=>Math.Abs(next.Top-column[i].Top-column[i].Height+((Border)next.Content).Margin.Top+((Border)column[i].Content).Margin.Bottom-10)<.1).All(ok=>ok);}));
    Check("Auto-arrangement saves geometry for restart",arranged.All(w=>{var n=new Store(app.DataRoot).Book.Notes.Single(n=>n.Id==w.Note.Id);return Math.Abs(n.Left-w.Left)<.1&&Math.Abs(n.Top-w.Top)<.1&&Math.Abs(n.Width-w.Width)<.1&&Math.Abs(n.Height-w.Height)<.1;}));
@@ -118,10 +121,11 @@ internal sealed class LiveVerification {
   first.Note.Pinned=original;first.Topmost=original;app.ShowNotes();
  }
  [DllImport("user32.dll")]static extern IntPtr GetShellWindow();
- void CaptureArrangementPreview(){
+ bool BottomArranged(){foreach(var group in app.NoteWindows.Values.GroupBy(w=>NoteWindow.WorkArea(w))){var ordered=group.OrderByDescending(w=>w.Left).ThenByDescending(w=>w.Top).ToArray();var plan=NoteArrangement.Plan(group.Key,ordered.Select(w=>new Size(w.Width,w.Height)).ToArray());if(plan==null||ordered.Where((w,i)=>Math.Abs(w.Left-plan[i].Left)>.1||Math.Abs(w.Top-plan[i].Top)>.1).Any())return false;}return true;}
+ void CaptureArrangementPreview(string name="auto-arrange-preview.png"){
   var work=NoteWindow.WorkArea(app.NoteWindows.Values.First());double scale=Math.Min(1600/work.Width,1200/work.Height);
   var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(Visuals.Brush("#E9EDF3"),null,new Rect(0,0,work.Width*scale,work.Height*scale));dc.PushTransform(new ScaleTransform(scale,scale));foreach(var w in app.NoteWindows.Values){w.UpdateLayout();dc.DrawRectangle(new VisualBrush(w){Stretch=Stretch.Fill},null,new Rect(w.Left-work.Left,w.Top-work.Top,w.Width,w.Height));}dc.Pop();}
-  var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(work.Width*scale),(int)Math.Ceiling(work.Height*scale),96,96,PixelFormats.Pbgra32);bitmap.Render(visual);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using var file=File.Create(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(report))!,"auto-arrange-preview.png"));encoder.Save(file);
+  var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(work.Width*scale),(int)Math.Ceiling(work.Height*scale),96,96,PixelFormats.Pbgra32);bitmap.Render(visual);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using var file=File.Create(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(report))!,name));encoder.Save(file);
  }
  void VerifyTitleCommit(NoteWindow w){
   var original=w.Note.Title;var text=new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text;
