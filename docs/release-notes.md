@@ -1,5 +1,8 @@
 # SMT Sticky Notes 1.6.2
 
+- Mantém a lista de áreas estável ao atualizar as notas e ignora a reseleção da área atual, evitando reabrir notas ocultas sem uma solicitação do usuário.
+
+- Atualizar a lista de notas não recria a seleção de áreas nem reabre notas ocultas; reselecionar a área atual é uma operação sem efeito.
 - Conclui a ocultação de uma nota mesmo se o evento final da animação não chegar, com fallback independente do compositor.
 - Cancelamento e geração de exibição impedem que uma conclusão antiga esconda uma nota restaurada rapidamente pela bandeja.
 - Remove o relógio de animação ao ocultar e encerra o fallback ao restaurar ou fechar a janela.
