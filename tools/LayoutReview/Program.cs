@@ -27,16 +27,19 @@ internal static class LayoutReview {
     widget.OpenSettings();Check("Cold settings fit native work area",widget.SettingsPanel is {} cold&&LiveVerification.NativeWindowFits(cold),new{dpi=DisplayDpi.Scale(widget).DpiScaleX});widget.CloseSettings(false);
     foreach(string theme in new[]{"Claro","Escuro"}){
      app.Store.Book.Theme=theme;widget.Refresh();
-     foreach(var size in new[]{new Size(360,400),new Size(360,320),new Size(300,320)}){
+     foreach(var size in new[]{new Size(360,460),new Size(300,460),new Size(300,320)}){
       var panel=new SettingsWindow(app,widget){ShowActivated=false,Width=size.Width,Height=size.Height};panel.Show();
       for(int section=0;section<panel.SectionCount;section++){
        panel.SelectSection(section);panel.UpdateLayout();
        var labels=Descendants<TextBlock>(panel).Where(t=>t.IsVisible&&!string.IsNullOrEmpty(t.Text)).ToArray();
        double RenderedFont(TextBlock text){var p=text.TranslatePoint(new Point(),panel);var q=text.TranslatePoint(new Point(0,text.FontSize),panel);return Math.Abs(q.Y-p.Y);}
-       Check($"Settings {theme} {size.Width}x{size.Height} section {section}",panel.SectionsFit(),new{minRenderedFont=labels.Min(RenderedFont),panel.SectionCount});
+       Check($"Settings {theme} {size.Width}x{size.Height} section {section}",(size.Height>=460?panel.SectionsFit():panel.NaturalTextSize()),new{minRenderedFont=labels.Where(t=>t.TemplatedParent==null).Min(RenderedFont),panel.SectionCount,compactScrollFallback=size.Height<460});
       }
       panel.Dismiss(false);
      }
+    }
+    foreach(double width in new[]{440d,360d,300d}){
+     var confirm=new FluentConfirmation(widget,"Conectar conta Google?","Esta é uma mensagem sintética de consentimento, sem conta real.\n\nNotas, imagens e cores serão combinadas somente após confirmação.","Conectar e sincronizar"){Width=width,ShowActivated=false};confirm.Show();confirm.UpdateLayout();var actions=Descendants<Button>(confirm).ToArray();bool Fits(Button b){var p=b.TranslatePoint(new Point(),confirm);return p.X>=0&&p.Y>=0&&p.X+b.ActualWidth<=confirm.ActualWidth+1&&p.Y+b.ActualHeight<=confirm.ActualHeight+1;}Check($"Account confirmation {width} DIP has safe default and reachable actions",actions.Length==2&&actions.All(Fits)&&actions.Single(b=>b.IsDefault).IsCancel,new{width});confirm.Close();
     }
     var note=app.Store.Create();note.Title=new string('W',180);
     var owner=new NoteWindow(app,note);new System.Windows.Interop.WindowInteropHelper(owner).EnsureHandle();
@@ -50,7 +53,7 @@ internal static class LayoutReview {
    }catch(Exception e){Check("Layout review completed",false,new{error=e.GetType().Name,message=e.Message});}
    finally{
     app.Sync?.Dispose();Directory.CreateDirectory(Path.GetDirectoryName(report)!);
-    File.WriteAllText(report,JsonSerializer.Serialize(new{reviewAssemblyVersion=Distribution.Version,failed,passed=checks.Count-failed,checks,scope="Linked-source WPF layout harness, not the distributed executable. No physical input, tray icon, real account or global display change. 300 DIP is a stress case and may reduce text below 10 DIP."},new JsonSerializerOptions{WriteIndented=true}));
+    File.WriteAllText(report,JsonSerializer.Serialize(new{reviewAssemblyVersion=Distribution.Version,failed,passed=checks.Count-failed,checks,scope="Linked-source WPF layout harness, not the distributed executable. No physical input, tray icon, real account or global display change. 300x320 DIP is an emergency scroll fallback; no font scaling is permitted."},new JsonSerializerOptions{WriteIndented=true}));
     app.Shutdown(failed==0?0:1);
    }
   };

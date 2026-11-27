@@ -62,3 +62,5 @@ O CI disponibiliza relatórios como artefatos da execução, incluindo arquitetu
 ## Compatibilidade e privacidade de distribuição
 
 Veja [a matriz e os limites de suporte](docs/COMPATIBILITY.md). O aplicativo não é vinculado à conta ou ao perfil do desenvolvedor. Credenciais pessoais são obtidas somente pelo login opcional de cada usuário; a identidade OAuth pública do app não concede acesso às notas. A release inclui verificações de arquivos privados e padrões conhecidos de tokens; isso não substitui revisão humana nem certificação da Microsoft.
+
+Configurações1.6.0: Geral, Notas e Google; Ctrl+Tab alterna seções e o botão de ajuda reúne atalhos. Ctrl+F busca no widget, Escape limpa antes de recolher. Interface reflow mantém fontes naturais. Consulte docs/fluent2-design.md e a nota da candidata para escopo e validação.

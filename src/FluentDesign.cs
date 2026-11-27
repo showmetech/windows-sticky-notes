@@ -18,6 +18,19 @@ internal static class FluentDesign {
  internal static Brush SelectedText(bool dark)=>SystemParameters.HighContrast?SystemColors.HighlightTextBrush:Text(dark);
  static Color Mix(Color from,Color to,double amount)=>Color.FromRgb((byte)Math.Round(from.R+(to.R-from.R)*amount),(byte)Math.Round(from.G+(to.G-from.G)*amount),(byte)Math.Round(from.B+(to.B-from.B)*amount));
  internal static void Select(Button button,bool selected,bool dark){button.Background=selected?Selected(dark):Control(dark);button.Foreground=selected?SelectedText(dark):Text(dark);button.BorderBrush=selected?Accent(dark):Stroke(dark);button.BorderThickness=new Thickness(selected?2:1);}
+ internal static ControlTemplate SwitchTemplate()=> (ControlTemplate)XamlReader.Parse("""
+ <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" TargetType="CheckBox">
+  <Grid Background="Transparent" MinHeight="32"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+   <Border x:Name="Track" Width="40" Height="20" CornerRadius="10" BorderThickness="1" BorderBrush="{TemplateBinding Foreground}" VerticalAlignment="Center"><Ellipse x:Name="Knob" Fill="{TemplateBinding Foreground}" Width="12" Height="12" HorizontalAlignment="Left" Margin="3,0"/></Border>
+   <ContentPresenter Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"/>
+   <Border x:Name="Ring" Grid.ColumnSpan="2" BorderBrush="{TemplateBinding Foreground}" BorderThickness="2" Margin="-3" CornerRadius="4" Visibility="Collapsed" IsHitTestVisible="False"/>
+  </Grid><ControlTemplate.Triggers>
+   <Trigger Property="IsChecked" Value="True"><Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/><Setter TargetName="Track" Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/><Setter TargetName="Knob" Property="Fill" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/></Trigger>
+   <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Visibility" Value="Visible"/></Trigger>
+   <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+  </ControlTemplate.Triggers>
+ </ControlTemplate>
+ """);
  internal static void ThemeControls(Window window,bool dark){
   if(SystemParameters.HighContrast){window.Resources.MergedDictionaries.Clear();return;}
   var uri=new Uri("pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent."+(dark?"Dark":"Light")+".xaml");

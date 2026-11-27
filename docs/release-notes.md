@@ -1,3 +1,14 @@
+# SMT Sticky Notes1.6.0 — candidata Fluent2
+
+- Configurações reorganizadas em Geral, Notas e Google; atalhos e versão na ajuda contextual.
+- Texto em tamanho natural, sem diminuir a página inteira. O painel usa espaço acima ou ao lado do widget e respeita a área útil; telas excepcionalmente pequenas mantêm rolagem acessível.
+- Busca com Ctrl+F, limpar e Escape; estado vazio específico para resultados ausentes.
+- Interruptor de início automático, restauração de opacidade100%, nova área com Enter e feedback junto ao campo.
+- Indicadores de negrito/itálico/lista acompanham a seleção. Paleta50cores adaptada ao monitor, com teclado e retorno de foco.
+- Confirmações Google consistentes com Fluent, Cancelar como padrão seguro; callback claro/escuro e nome SMT.
+- Identidade Store/bandeja, notas, formatação humana, conta Google e sincronização existentes preservados. Nenhuma migração de dados necessária.
+- Testes pertencem à candidata; publicação e instalação dependem do fluxo oficial, não implícitas nesta nota.
+
 # SMT Sticky Notes 1.5.8
 
 - Organiza as notas automaticamente na primeira exibição de cada área a cada execução do app, inclusive ao abrir pela bandeja após iniciar com o Windows.
