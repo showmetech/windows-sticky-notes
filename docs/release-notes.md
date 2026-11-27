@@ -1,3 +1,9 @@
+# 1.6.3
+
+- Preserva tamanho e posição normais das notas ao minimizar pelo Windows ou encerrar o aplicativo; notificações temporárias de janela não substituem as dimensões salvas.
+- Mantém o último retângulo válido durante minimização e encerramento, sem alterar notas, contas, cores ou o formato dos dados.
+- Acrescenta regressões de geometria no modelo, no arquivo salvo e após a saída normal. A validação do alinhamento considera o arredondamento de um pixel físico em telas com DPI diferente.
+
 # SMT Sticky Notes 1.6.2
 
 - Mantém a lista de áreas estável ao atualizar as notas e ignora a reseleção da área atual, evitando reabrir notas ocultas sem uma solicitação do usuário.

@@ -13,7 +13,7 @@ using System.Windows.Threading;
 namespace StickyNotes;
 internal sealed class LiveVerification {
  readonly NotesApp app;readonly string report;readonly List<object> checks=new();readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromMilliseconds(600)};int phase;int failed;
- string? manuallyMovedId;Rect manuallyMovedBounds;
+ string? manuallyMovedId;Rect manuallyMovedBounds;readonly List<object> arrangementMeasurements=new();
  LiveVerification(NotesApp app,string report){this.app=app;this.report=report;timer.Tick+=Tick;timer.Start();}
  public static void Start(NotesApp app,string report)=>_=new LiveVerification(app,report);
  void Check(string name,bool ok){checks.Add(new{name,passed=ok});if(!ok)failed++;}
@@ -93,7 +93,10 @@ internal sealed class LiveVerification {
    phase=90;break;
   case 90:
    Check("Rapid click result remains visible after animations complete",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
+   var normalBounds=app.NoteWindows.Values.ToDictionary(w=>w.Note.Id,w=>new Rect(w.Left,w.Top,w.Width,w.Height));
    foreach(var noteWindow in app.NoteWindows.Values)noteWindow.WindowState=WindowState.Minimized;app.HandleTrayClick();Check("Tray click also restores windows minimized by Windows",app.NoteWindows.Values.All(w=>w.WindowState==WindowState.Normal&&w.IsPresented));
+   Check("OS minimize and restore preserves each note model geometry",app.NoteWindows.Values.All(w=>normalBounds[w.Note.Id]==new Rect(w.Note.Left,w.Note.Top,w.Note.Width,w.Note.Height)));
+   var persistedAfterMinimize=new Store(app.DataRoot);Check("OS minimize and restore never persists icon-sized note dimensions",persistedAfterMinimize.Book.Notes.All(n=>normalBounds[n.Id]==new Rect(n.Left,n.Top,n.Width,n.Height)));
    VerifyNoteAutoHide();app.Widget.Present();
    var tiles=app.Widget.NoteTiles;
    Check("Widget has one compact single-line button per note with exact saved color and readable title",tiles.Length==3&&tiles.All(tile=>{var n=app.Store.Book.Notes.Single(n=>n.Id==(string)tile.Tag);return tile.Content is TextBlock text&&text.Text==n.Title&&text.TextWrapping==TextWrapping.NoWrap&&text.TextTrimming==TextTrimming.CharacterEllipsis&&tile.Height==46&&(SystemParameters.HighContrast||tile.Background is SolidColorBrush brush&&brush.Color==(Color)ColorConverter.ConvertFromString(n.Color)&&tile.Foreground is SolidColorBrush ink&&NoteColors.Contrast(brush.Color,ink.Color)>=4.5);}));
@@ -117,8 +120,15 @@ internal sealed class LiveVerification {
    app.HandleTrayClick();Check("Tray restores notes after interrupted fade completion",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
    foreach(var w in app.NoteWindows.Values){w.Conceal();w.Present();}break;
   case 19:
-   Check("Stale fade completion never hides notes restored immediately",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));timer.Stop();Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);CapturePreview();File.WriteAllText(report,JsonSerializer.Serialize(new{at=DateTimeOffset.Now,failed,checks,notes=app.NoteWindows.Values.Select(w=>new{w.Note.Title,w.Left,w.Top,w.Width,w.Height,w.ShowInTaskbar}),limitations="Tray restoration invoked through the same handler as the native left click; no physical tray click was automated. Physical monitor hot-unplug, ARM64 hardware and OS reboot were not tested. Preview PNGs render the real WPF window tree with fixture notes, not a screenshot of the desktop."},new JsonSerializerOptions{WriteIndented=true}));app.ExitApp();break;
+   Check("Stale fade completion never hides notes restored immediately",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));timer.Stop();FinishVerification();break;
  }}catch(Exception ex){timer.Stop();File.WriteAllText(report,ex.ToString());app.ExitApp();}}
+ void FinishVerification(){
+  Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);CapturePreview();
+  var snapshot=app.NoteWindows.Values.Select(w=>new{w.Note.Id,w.Note.Title,w.Left,w.Top,w.Width,w.Height,w.ShowInTaskbar}).ToArray();
+  app.ExitApp();var reopened=new Store(app.DataRoot);
+  Check("Normal shutdown preserves final note sizes and positions",app.Exiting&&snapshot.All(saved=>{var n=reopened.Book.Notes.Single(n=>n.Id==saved.Id);return new Rect(n.Left,n.Top,n.Width,n.Height)==new Rect(saved.Left,saved.Top,saved.Width,saved.Height);}));
+  File.WriteAllText(report,JsonSerializer.Serialize(new{at=DateTimeOffset.Now,failed,checks,arrangementMeasurements,notes=snapshot.Select(n=>new{n.Title,n.Left,n.Top,n.Width,n.Height,n.ShowInTaskbar}),limitations="Native handlers and real WPF windows with isolated fixtures. Physical tray input, monitor hot-unplug, screen readers and reboot require separate evidence."},new JsonSerializerOptions{WriteIndented=true}));
+ }
  void VerifyNoteAutoHide(){
   var windows=app.NoteWindows.Values.ToArray();var focus=app.AutoHide!;var first=windows[0];var original=first.Note.Pinned;
   var text=windows.ToDictionary(w=>w.Note.Id,w=>new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text);var geometry=windows.ToDictionary(w=>w.Note.Id,w=>new Rect(w.Left,w.Top,w.Width,w.Height));
@@ -134,7 +144,17 @@ internal sealed class LiveVerification {
   first.Note.Pinned=original;first.Topmost=original;app.ShowNotes();
  }
  [DllImport("user32.dll")]static extern IntPtr GetShellWindow();
- bool BottomArranged(){foreach(var group in app.NoteWindows.Values.GroupBy(w=>NoteWindow.WorkArea(w))){var ordered=group.OrderByDescending(w=>w.Left).ThenByDescending(w=>w.Top).ToArray();var plan=NoteArrangement.Plan(group.Key,ordered.Select(w=>new Size(w.Width,w.Height)).ToArray());if(plan==null||ordered.Where((w,i)=>Math.Abs(w.Left-plan[i].Left)>.1||Math.Abs(w.Top-plan[i].Top)>.1).Any())return false;}return true;}
+ bool BottomArranged(){
+  double maxPixels=0;bool aligned=true;
+  foreach(var group in app.NoteWindows.Values.GroupBy(w=>NoteWindow.WorkArea(w))){
+   var ordered=group.OrderByDescending(w=>w.Left).ThenByDescending(w=>w.Top).ToArray();
+   var plan=NoteArrangement.Plan(group.Key,ordered.Select(w=>new Size(w.Width,w.Height)).ToArray());if(plan==null)return false;
+   for(int i=0;i<ordered.Length;i++){var scale=DisplayDpi.Scale(ordered[i]);double pixels=Math.Max(Math.Abs(ordered[i].Left-plan[i].Left)*scale.DpiScaleX,Math.Abs(ordered[i].Top-plan[i].Top)*scale.DpiScaleY);maxPixels=Math.Max(maxPixels,pixels);if(pixels>1.01)aligned=false;}
+  }
+  // Native layout rounding may consume one physical pixel across stacked cards.
+  arrangementMeasurements.Add(new{phase,maxErrorPhysicalPixels=maxPixels,allowedPhysicalPixels=1.01});return aligned;
+ }
+
  void CaptureArrangementPreview(string name="auto-arrange-preview.png"){
   var work=NoteWindow.WorkArea(app.NoteWindows.Values.First());double scale=Math.Min(1600/work.Width,1200/work.Height);
   var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(Visuals.Brush("#E9EDF3"),null,new Rect(0,0,work.Width*scale,work.Height*scale));dc.PushTransform(new ScaleTransform(scale,scale));foreach(var w in app.NoteWindows.Values){w.UpdateLayout();dc.DrawRectangle(new VisualBrush(w){Stretch=Stretch.Fill},null,new Rect(w.Left-work.Left,w.Top-work.Top,w.Width,w.Height));}dc.Pop();}
