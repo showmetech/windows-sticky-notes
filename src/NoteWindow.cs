@@ -23,8 +23,11 @@ public sealed class NoteWindow:Window {
  public readonly TextBox TitleBox;
  readonly NotesApp app;readonly Border surface;readonly TextBlock status=new(){FontSize=11,TextWrapping=TextWrapping.Wrap,Visibility=Visibility.Collapsed};
  readonly DispatcherTimer saveTimer=new(){Interval=TimeSpan.FromMilliseconds(500)};
+ readonly DispatcherTimer hideFallback=new(DispatcherPriority.Normal){Interval=TimeSpan.FromMilliseconds(400)};int hideGeneration;
  readonly Border focusRing=new(){IsHitTestVisible=false,CornerRadius=new CornerRadius(8),BorderThickness=new Thickness(3),Opacity=0,Margin=new Thickness(-16,-10,-16,-10)};
  readonly DispatcherTimer highlightTimer=new(){Interval=TimeSpan.FromSeconds(2.8)};
+ // Verification can omit the compositor callback without changing Windows preferences.
+ internal Action<DoubleAnimation>? HideAnimationOverride;
  internal bool HighlightVisible=>focusRing.Opacity>0;
  internal bool IsPresented=>presentationRequested&&IsVisible&&WindowState!=WindowState.Minimized;
  Popup? activePalette;
@@ -50,10 +53,10 @@ public sealed class NoteWindow:Window {
   bullets=Visuals.Icon("\uE8FD","Lista com marcadores",()=>{Editor.Focus();EditingCommands.ToggleBullets.Execute(null,Editor);});tools.Children.Add(bullets);Editor.SelectionChanged+=(_,_)=>RefreshFormatting();
   foreach(Button action in tools.Children)action.Margin=new Thickness(1,0,1,0);var toolbar=new Grid{Margin=new Thickness(0,10,0,8)};toolbar.ColumnDefinitions.Add(new());toolbar.ColumnDefinitions.Add(new(){Width=GridLength.Auto});toolbar.Children.Add(tools);var trash=Visuals.Icon("\uE74D","Excluir nota",RequestDelete);trash.Margin=new Thickness(1,0,0,0);Grid.SetColumn(trash,1);toolbar.Children.Add(trash);Grid.SetRow(toolbar,3);layout.Children.Add(toolbar);
   Grid.SetRow(status,4);layout.Children.Add(status);InstallResizeHandles(frame);Panel.SetZIndex(focusRing,2);frame.Children.Add(focusRing);
-  highlightTimer.Tick+=(_,_)=>StopHighlight();
+  highlightTimer.Tick+=(_,_)=>StopHighlight();hideFallback.Tick+=(_,_)=>CompleteConceal(hideGeneration);
   saveTimer.Tick+=(_,_)=>Save();LocationChanged+=(_,_)=>{if(ready)CapturePosition();};SizeChanged+=(_,_)=>{if(ready)CapturePosition();};
   PreviewKeyDown+=(_,e)=>{if(e.Key==Key.Escape){Conceal();e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.OemComma){app.ShowLibrary(true);e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.N){app.NewNote();e.Handled=true;}else if(Keyboard.Modifiers==ModifierKeys.Control&&e.Key==Key.S){Save();e.Handled=true;}else if(Keyboard.Modifiers==(ModifierKeys.Control|ModifierKeys.Shift)&&e.Key==Key.H){app.HideNotes();e.Handled=true;}};
-  Closing+=(_,e)=>{if(!app.Exiting){e.Cancel=true;Conceal();}};Closed+=(_,_)=>{disposed=true;saveTimer.Stop();StopHighlight();};
+  Closing+=(_,e)=>{if(!app.Exiting){e.Cancel=true;Conceal();}};Closed+=(_,_)=>{disposed=true;saveTimer.Stop();hideFallback.Stop();StopHighlight();};
   SourceInitialized+=(_,_)=>FitToScreen();DpiChanged+=(_,_)=>{if(!dragging&&!resizing)Dispatcher.BeginInvoke(FitToScreen);};Deactivated+=(_,_)=>Save();ApplyColor();ready=true;
  }
  public static Rect WorkArea(Window w){var hwnd=new WindowInteropHelper(w).Handle;var a=Forms.Screen.FromHandle(hwnd).WorkingArea;var m=DisplayDpi.FromDevice(w);var p=m.Transform(new Point(a.Left,a.Top));var size=m.Transform(new Vector(a.Width,a.Height));return new Rect(p.X,p.Y,size.X,size.Y);}
@@ -76,8 +79,19 @@ public sealed class NoteWindow:Window {
   Left=accessible?savedLeft:Math.Clamp(double.IsFinite(savedLeft)?savedLeft:r.Right-Width-16,r.Left,r.Right-Width);Top=accessible?savedTop:Math.Clamp(double.IsFinite(savedTop)?savedTop:r.Top+32,r.Top,r.Bottom-Height);
  }finally{placing=false;}CapturePosition();
  }
- public void Present(){if(disposed)return;app.AutoHide?.Hold();presentationRequested=true;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
- public void Conceal(){if(confirming||!Save())return;presentationRequested=false;StopHighlight();int generation=++visibilityGeneration;if(!SystemParameters.ClientAreaAnimation||SystemParameters.HighContrast||!IsVisible){Hide();return;}var fade=new System.Windows.Media.Animation.DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));fade.Completed+=(_,_)=>{if(generation==visibilityGeneration)Hide();};surface.BeginAnimation(OpacityProperty,fade);}
+ public void Present(){if(disposed)return;hideFallback.Stop();app.AutoHide?.Hold();presentationRequested=true;visibilityGeneration++;BeginAnimation(OpacityProperty,null);Opacity=1;Show();WindowState=WindowState.Normal;Activate();Visuals.Reveal(this,surface);}
+ public void Conceal(){
+  if(confirming||!Save())return;
+  hideFallback.Stop();presentationRequested=false;StopHighlight();int generation=++visibilityGeneration;
+  if(!SystemParameters.ClientAreaAnimation||SystemParameters.HighContrast||!IsVisible){CompleteConceal(generation);return;}
+  hideGeneration=generation;hideFallback.Start();
+  var fade=new DoubleAnimation(1,0,TimeSpan.FromMilliseconds(140));
+  fade.Completed+=(_,_)=>CompleteConceal(generation);if(HideAnimationOverride is {} animate)animate(fade);else surface.BeginAnimation(OpacityProperty,fade);
+ }
+ void CompleteConceal(int generation){
+  if(disposed||generation!=visibilityGeneration||presentationRequested)return;
+  hideFallback.Stop();Hide();surface.BeginAnimation(OpacityProperty,null);
+ }
  internal void Highlight(){
   if(disposed||!IsVisible)return;StopHighlight();
   var background=NoteColors.Surface(Note.Color,Note.ColorMode,Visuals.Dark(app.Store.Book.Theme));

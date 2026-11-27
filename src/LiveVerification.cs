@@ -90,6 +90,13 @@ internal sealed class LiveVerification {
   case 90:
    Check("Rapid click result remains visible after animations complete",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
    foreach(var noteWindow in app.NoteWindows.Values)noteWindow.WindowState=WindowState.Minimized;app.HandleTrayClick();Check("Tray click also restores windows minimized by Windows",app.NoteWindows.Values.All(w=>w.WindowState==WindowState.Normal&&w.IsPresented));
+   foreach(var w in app.NoteWindows.Values){w.HideAnimationOverride=_=>{};try{w.Conceal();}finally{w.HideAnimationOverride=null;}}phase=91;break;
+  case 91:
+   Check("Interrupted note fade still completes concealment without an animation callback",app.NoteWindows.Values.All(w=>!w.IsVisible&&!w.IsPresented));
+   app.HandleTrayClick();Check("Tray restores notes after interrupted fade completion",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
+   foreach(var w in app.NoteWindows.Values){w.Conceal();w.Present();}phase=92;break;
+  case 92:
+   Check("Stale fade completion never hides notes restored immediately",app.NoteWindows.Values.All(w=>w.IsVisible&&w.IsPresented));
    VerifyNoteAutoHide();app.Widget.Present();
    var tiles=app.Widget.NoteTiles;
    Check("Widget has one compact single-line button per note with exact saved color and readable title",tiles.Length==3&&tiles.All(tile=>{var n=app.Store.Book.Notes.Single(n=>n.Id==(string)tile.Tag);return tile.Content is TextBlock text&&text.Text==n.Title&&text.TextWrapping==TextWrapping.NoWrap&&text.TextTrimming==TextTrimming.CharacterEllipsis&&tile.Height==46&&(SystemParameters.HighContrast||tile.Background is SolidColorBrush brush&&brush.Color==(Color)ColorConverter.ConvertFromString(n.Color)&&tile.Foreground is SolidColorBrush ink&&NoteColors.Contrast(brush.Color,ink.Color)>=4.5);}));

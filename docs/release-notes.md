@@ -1,3 +1,10 @@
+# SMT Sticky Notes 1.6.2
+
+- Conclui a ocultação de uma nota mesmo se o evento final da animação não chegar, com fallback independente do compositor.
+- Cancelamento e geração de exibição impedem que uma conclusão antiga esconda uma nota restaurada rapidamente pela bandeja.
+- Remove o relógio de animação ao ocultar e encerra o fallback ao restaurar ou fechar a janela.
+- Regressão interrompe explicitamente o fade e verifica ocultação, restauração e alternância rápida sem alterar notas pessoais.
+
 # SMT Sticky Notes 1.6.1
 
 - Reinicia o tempo de inatividade do widget ao fechar as configurações, evitando que ele se oculte imediatamente depois de uma permanência longa no painel.
