@@ -1,4 +1,4 @@
-# Windows Sticky Notes
+# SMT Sticky Notes
 
 [![Build e testes](https://github.com/showmetech/windows-sticky-notes/actions/workflows/release.yml/badge.svg)](https://github.com/showmetech/windows-sticky-notes/actions/workflows/release.yml)
 
@@ -10,11 +10,11 @@
 
 Notas adesivas para Windows 11, com a mesma base visual dos widgets de áudio e calendário: Segoe UI Variable, tema Fluent, cabeçalho de 64 px, ações de 32 px, cantos de 8 px, superfícies sólidas com opacidade padrão de 100% e animação de abertura/recolhimento de 240 ms que respeita as preferências do Windows.
 
-## Widget e configurações da suíte · 1.3.0
+## Widget e configurações
 
-O widget de 360 px reúne áreas, busca, notas e lixeira. As configurações abrem em uma janela da mesma largura, acoplada acima do widget com intervalo de 12 px. A altura se adapta ao monitor. Aparência e inicialização, áreas, dados/backup e atalhos ficam em cinco seções com ícones e navegação por teclado, ajustadas sem rolagem.
+O widget de 360 DIP reúne áreas, busca, notas e lixeira. As configurações usam três seções: Geral, Notas e Google; atalhos e informações da versão ficam na ajuda. A janela se posiciona acima ou ao lado do widget conforme a área útil do monitor. Fontes e controles mantêm o tamanho natural; telas excepcionalmente pequenas usam rolagem acessível. Ctrl+Tab alterna as seções, Ctrl+F busca e Escape limpa a busca antes de recolher.
 
-O alfinete do widget o mantém aberto; o alfinete de cada nota continua independente. Sem fixar, o widget recolhe ao mudar para outro app, após 20 segundos sem interação, ou ao abrir outro widget compatível da suíte. Esse recolhimento não oculta nem exclui as notas da mesa. Enquanto configurações ou o menu estão em uso, o widget permanece aberto. Esc recolhe a janela atual e Ctrl+, abre configurações. Há acesso direto às configurações na faixa superior de cada nota.
+O alfinete do widget o mantém aberto; o alfinete de cada nota continua independente. Sem fixar, o widget recolhe ao mudar para outro app, após 20 segundos sem interação, ou ao abrir outro widget compatível da suíte. Esse recolhimento não oculta nem exclui as notas da mesa. Enquanto configurações ou o menu estão em uso, o widget permanece aberto. Ao fechar as configurações, começa um novo período de inatividade de 20 segundos. Esc recolhe a janela atual e Ctrl+, abre configurações. Há acesso direto às configurações na faixa superior de cada nota.
 
 A bandeja usa a integração nativa do Windows, com ícone próprio, ativação por mouse/teclado e recriação do ícone após reinício do Explorer. O aplicativo não cria janela principal na barra de tarefas. `--settings` abre as configurações; `--startup` inicia apenas a bandeja.
 
@@ -23,7 +23,7 @@ A bandeja usa a integração nativa do Windows, com ícone próprio, ativação 
 - **Clique no ícone da bandeja:** oculta todas as notas quando alguma está visível; quando todas estão ocultas, mostra as notas da área ativa nas posições salvas. O widget fica no menu do botão direito. Não cria botões na barra de tarefas.
 - **Botão direito na bandeja:** nova nota, mostrar/ocultar, notas e áreas, grade, configurações e sair.
 - **Arraste pela faixa superior**, ao lado dos botões, para posicionar a nota livremente na área de trabalho. Para redimensionar, passe o mouse por qualquer lateral ou canto e arraste quando aparecer o cursor de ajuste. Laterais alteram um eixo; cantos ajustam largura e altura. Posição e tamanho continuam salvos ao reabrir.
-- **Edite o título e escreva no corpo.** Ctrl+B e Ctrl+I formatam o texto; o botão de lista insere marcadores.
+- **Edite o título e pressione Enter para confirmar**, salvar e levar o foco ao corpo, sem inserir uma quebra no título. Escreva no corpo. Ctrl+B e Ctrl+I formatam o texto; o botão de lista insere marcadores.
 - **Imagens:** cole com Ctrl+V, arraste um arquivo para o corpo ou use o botão de imagem. A imagem é incorporada à nota: o arquivo original pode ser movido depois. Imagens grandes são reduzidas para até 1.600 pixels de largura; arquivos de até 30 MB. Formatos dependem dos decodificadores presentes no Windows; PNG e JPEG são as opções mais seguras.
 - **Cor:** clique na amostra colorida e escolha entre **50 cores**, organizadas em cinco linhas de dez: **Normal**, **Pastel**, **Vivas**, **Neon** e **Terrosas**, ou uma cor personalizada. Vivas e Neon preservam a saturação mesmo no tema escuro; o texto alterna automaticamente entre preto e branco para manter contraste. Cores automáticas evitam as já usadas pelas notas ativas, inclusive as escolhidas manualmente.
 - **Alfinete:** mantém a nota acima das outras janelas. Sem fixar, a nota se recolhe ao mudar o foco para outro aplicativo ou para a área de trabalho. Editar outra nota ou usar controles do próprio app não a recolhe.
@@ -31,17 +31,23 @@ A bandeja usa a integração nativa do Windows, com ícone próprio, ativação 
 - **Áreas:** crie áreas em Configurações e selecione a área ativa no widget. São grupos próprios do app, não áreas de trabalho virtuais do Windows.
 - **Lixeira:** use o botão à direita da barra inferior, alinhado com os demais controles. A exclusão pede confirmação; Cancelar é a ação padrão. A nota só é movida após confirmar “Excluir nota” e pode ser restaurada pelo widget. Esta versão não faz exclusão definitiva nem esvazia a lixeira automaticamente.
 
-## Instalação e dados
+## Instalação pela Microsoft Store
 
-O aplicativo é instalado por usuário, sem administrador, em `%LOCALAPPDATA%\Programs\WindowsStickyNotes`. A inicialização automática abre apenas a bandeja. É possível desativá-la nas configurações. Há um atalho no menu Iniciar; use `Install.ps1 -DesktopShortcut` para criar também um atalho na área de trabalho. Um atalho do próprio app já existente é atualizado. O ícone Fluent tem três notas coloridas e usa um arquivo versionado nos atalhos para evitar cache antigo.
+Instale ou atualize pela [página oficial SMT Sticky Notes](https://apps.microsoft.com/detail/9PN00KMTMDS1). A Store fornece a arquitetura adequada, assinatura e atualizações pelo canal oficial; mantenha suas atualizações automáticas habilitadas. O app é por usuário e requer Windows 11 em versão suportada, x64 ou ARM64. Não depende da conta do desenvolvedor.
 
-Escolha o pacote x64 para Intel/AMD ou ARM64 para Windows em ARM. Pacote portátil: extraia o ZIP inteiro e abra `app\WindowsStickyNotes.exe`. Para instalar, execute `Install.ps1` com PowerShell. Os scripts exigem que a política de execução do Windows permita scripts. Se forem bloqueados, use o executável portátil ou aguarde a versão Store; não é necessário desativar proteções. Não é necessário instalar o .NET: o runtime da arquitetura escolhida acompanha o executável. O pacote portátil não tem assinatura digital. A publicação na Microsoft Store depende de cadastro aprovado, identidade oficial e certificação; consulte o estado da release, sem presumir que já está disponível na loja.
+Na edição Store, as notas ficam em `%LOCALAPPDATA%\Packages\Showmetech.ShowmetechStickyNotes_t8ppe5514qkcj\LocalState\notes`. O menu Iniciar mostra SMT Sticky Notes; a execução normal permanece na bandeja. Para manutenção, preserve a identidade instalada e use as atualizações da Store. Não instale um ZIP paralelamente para adiantar a certificação.
 
-As notas ficam em `%LOCALAPPDATA%\Bruno\WindowsStickyNotes`. A conta Google é opcional: conecte a mesma conta nos dois computadores em Configurações → Sincronização com Google. O app usa a pasta privada do Google Drive; veja [sincronização e conflitos](docs/GOOGLE-SYNC.md). Não há telemetria. Não são criptografadas pelo aplicativo; a proteção depende da conta e do disco do Windows. Backups ZIP também contêm os textos e imagens.
+## Distribuição alternativa e dados
+
+Na distribuição alternativa ZIP, o aplicativo é instalado por usuário, sem administrador, em `%LOCALAPPDATA%\Programs\WindowsStickyNotes`. A inicialização automática abre apenas a bandeja. É possível desativá-la nas configurações. Há um atalho no menu Iniciar; use `Install.ps1 -DesktopShortcut` para criar também um atalho na área de trabalho. Um atalho do próprio app já existente é atualizado. O ícone Fluent tem três notas coloridas e usa um arquivo versionado nos atalhos para evitar cache antigo.
+
+Escolha o pacote x64 para Intel/AMD ou ARM64 para Windows em ARM. Pacote portátil: extraia o ZIP inteiro e abra `app\WindowsStickyNotes.exe`. Para instalar, execute `Install.ps1` com PowerShell. Os scripts exigem que a política de execução do Windows permita scripts. Se forem bloqueados, use o executável portátil ou use a versão Store; não é necessário desativar proteções. Não é necessário instalar o .NET: o runtime da arquitetura escolhida acompanha o executável. O pacote portátil não tem assinatura digital. A versão Store já está disponível na página oficial. Cada nova atualização ainda passa pela certificação da Microsoft; uma release nova no GitHub não comprova disponibilidade dessa mesma versão na Store.
+
+Na distribuição ZIP, as notas ficam em `%LOCALAPPDATA%\Bruno\WindowsStickyNotes`; a edição Store usa o caminho próprio descrito acima. A conta Google é opcional: conecte a mesma conta nos dois computadores em Configurações → Google. O app usa a pasta privada do Google Drive; veja [sincronização e conflitos](docs/GOOGLE-SYNC.md). Não há telemetria. Não são criptografadas pelo aplicativo; a proteção depende da conta e do disco do Windows. Backups ZIP também contêm os textos e imagens.
 
 O salvamento ocorre após 500 ms sem edição, ao ocultar e ao sair. Gravações são atômicas e mantêm uma cópia anterior `.bak`. Falhas de gravação aparecem na nota e impedem o fechamento normal. Em recuperação de corrupção, o original é preservado. Queda de energia antes do salvamento pode perder a última alteração ainda não gravada.
 
-“Exportar backup completo” cria um ZIP com índice, documentos e cópias anteriores. Para restaurar manualmente: saia pelo menu da bandeja, preserve a pasta atual de dados e extraia o backup nessa pasta. A versão 1.0 não oferece importação gráfica. A desinstalação preserva a pasta de notas.
+“Exportar backup completo” cria um ZIP com índice, documentos e cópias anteriores. Para restaurar manualmente: saia pelo menu da bandeja, preserve a pasta atual de dados e extraia o backup nessa pasta. Não há importação gráfica de backup. A desinstalação preserva a pasta de notas.
 
 ## Referências de projeto
 
@@ -63,4 +69,4 @@ O CI disponibiliza relatórios como artefatos da execução, incluindo arquitetu
 
 Veja [a matriz e os limites de suporte](docs/COMPATIBILITY.md). O aplicativo não é vinculado à conta ou ao perfil do desenvolvedor. Credenciais pessoais são obtidas somente pelo login opcional de cada usuário; a identidade OAuth pública do app não concede acesso às notas. A release inclui verificações de arquivos privados e padrões conhecidos de tokens; isso não substitui revisão humana nem certificação da Microsoft.
 
-Configurações1.6.0: Geral, Notas e Google; Ctrl+Tab alterna seções e o botão de ajuda reúne atalhos. Ctrl+F busca no widget, Escape limpa antes de recolher. Interface reflow mantém fontes naturais. Consulte docs/fluent2-design.md e a nota da candidata para escopo e validação.
+Configurações1.6.0: Geral, Notas e Google; Ctrl+Tab alterna seções e o botão de ajuda reúne atalhos. Ctrl+F busca no widget, Escape limpa antes de recolher. Interface reflow mantém fontes naturais. Consulte docs/fluent2-design.md e as notas de versão para escopo e validação.

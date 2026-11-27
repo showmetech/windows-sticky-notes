@@ -4,7 +4,7 @@
 - Preserva o recolhimento por clique externo e o comportamento de fixação.
 - Acrescenta regressões do retorno das configurações após 25 segundos, sem aguardar tempo real nem alterar notas pessoais.
 
-# SMT Sticky Notes1.6.0 — candidata Fluent2
+# SMT Sticky Notes 1.6.0 — Fluent 2
 
 - Configurações reorganizadas em Geral, Notas e Google; atalhos e versão na ajuda contextual.
 - Texto em tamanho natural, sem diminuir a página inteira. O painel usa espaço acima ou ao lado do widget e respeita a área útil; telas excepcionalmente pequenas mantêm rolagem acessível.
