@@ -47,12 +47,12 @@ internal sealed class LiveVerification {
    Check("Repeated auto-arrangement leaves the same windows aligned",arranged.Select((w,i)=>Math.Abs(w.Left-firstArrangement[i].Left)<.1&&Math.Abs(w.Top-firstArrangement[i].Top)<.1&&Math.Abs(w.Height-firstArrangement[i].Height)<.1).All(ok=>ok));
    CaptureArrangementPreview();app.Widget.Present();break;
   case 5:
-   Check("Widget uses the public SMT product name",app.Widget.Title==Distribution.DisplayName+" � Widget");
+   Check("Widget uses the public SMT product name",app.Widget.Title==Distribution.DisplayName+" — Widget");
    Check("Suite widget header aligns settings, pin and close",SuiteChrome.Aligned(app.Widget));
    Check("Suite widget stays off taskbar",!app.Widget.ShowInTaskbar);
    Check("Three icon actions fit in one aligned row",app.Widget.PanelActionsAligned());
    Check("Empty search shows its visual hint",app.Widget.SearchHintVisible);
-   app.Widget.SearchInput.Text="Refer�ncias";
+   app.Widget.SearchInput.Text="Referências";
    Check("Search hides hint and filters colored note cards",!app.Widget.SearchHintVisible&&app.Widget.NoteTiles.Length==1);Check("Search provides an accessible clear action",app.Widget.ClearSearchButton.IsVisible);app.Widget.ClearSearchButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Clear search restores every note and hides itself",app.Widget.SearchInput.Text.Length==0&&app.Widget.NoteTiles.Length==3&&!app.Widget.ClearSearchButton.IsVisible);
    VerifySettingsIdleReturn();app.Widget.OpenSettings();break;
   case 6:
@@ -60,7 +60,7 @@ internal sealed class LiveVerification {
    Check("Settings panel stays off taskbar",app.Widget.SettingsPanel?.ShowInTaskbar==false);
    Check("Three settings sections fit without scrolling",app.Widget.SettingsPanel!.SectionCount==3&&app.Widget.SettingsPanel.SectionsFit());
    var panel=app.Widget.SettingsPanel!;double savedHeight=panel.Height;panel.Height=460;Check("Settings sections remain fully reachable at natural font size",panel.SectionsFit()&&panel.NaturalTextSize());panel.Height=savedHeight;panel.UpdateLayout();
-   panel.SelectSection(1);var areaInput=Walk<TextBox>(panel).Single(t=>System.Windows.Automation.AutomationProperties.GetName(t)=="Nome da nova �rea");var createArea=Walk<Button>(panel).Single(t=>System.Windows.Automation.AutomationProperties.GetName(t)=="Criar �rea");string previousArea=app.Store.Book.ActiveArea;areaInput.Text="QA new area";createArea.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Creating an area persists it and keeps success feedback inside the panel",new Store(app.DataRoot).Book.Areas.Contains("QA new area")&&panel.SectionsFit());areaInput.Text="QA new area";createArea.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Duplicate area validation stays inline without adding a second area",app.Store.Book.Areas.Count(a=>a=="QA new area")==1&&panel.SectionsFit());areaInput.Clear();createArea.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Empty area validation keeps every control reachable",panel.SectionsFit());app.SwitchArea(previousArea);app.Store.Book.Areas.Remove("QA new area");app.Store.Save();panel.SelectSection(0);
+   panel.SelectSection(1);var areaInput=Walk<TextBox>(panel).Single(t=>System.Windows.Automation.AutomationProperties.GetName(t)=="Nome da nova área");var createArea=Walk<Button>(panel).Single(t=>System.Windows.Automation.AutomationProperties.GetName(t)=="Criar área");string previousArea=app.Store.Book.ActiveArea;areaInput.Text="QA new area";createArea.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Creating an area persists it and keeps success feedback inside the panel",new Store(app.DataRoot).Book.Areas.Contains("QA new area")&&panel.SectionsFit());areaInput.Text="QA new area";createArea.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Duplicate area validation stays inline without adding a second area",app.Store.Book.Areas.Count(a=>a=="QA new area")==1&&panel.SectionsFit());areaInput.Clear();createArea.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Check("Empty area validation keeps every control reachable",panel.SectionsFit());app.SwitchArea(previousArea);app.Store.Book.Areas.Remove("QA new area");app.Store.Save();panel.SelectSection(0);
    var opacity=app.Widget.SettingsPanel!.OpacitySlider;
    Check("Opacity slider starts at 100 percent with keyboard range controls",opacity.Value==100&&opacity.Minimum==0&&opacity.Maximum==100&&opacity.SmallChange==1);
    opacity.Value=35;Check("Opacity slider updates all window backgrounds immediately",app.NoteWindows.Values.Cast<Window>().Concat(new Window[]{app.Widget,app.Widget.SettingsPanel}).All(w=>SurfaceAlpha(w,SystemParameters.HighContrast?(byte)255:(byte)89)));
@@ -133,7 +133,7 @@ internal sealed class LiveVerification {
  static IEnumerable<T> Walk<T>(DependencyObject root)where T:DependencyObject{for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){var child=VisualTreeHelper.GetChild(root,i);if(child is T value)yield return value;foreach(var next in Walk<T>(child))yield return next;}}
  void VerifyTitleCommit(NoteWindow w){
   var original=w.Note.Title;var text=new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text;
-  w.Activate();w.TitleBox.Focus();w.TitleBox.Text="T�tulo confirmado com Enter";
+  w.Activate();w.TitleBox.Focus();w.TitleBox.Text="Título confirmado com Enter";
   var enter=new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,PresentationSource.FromVisual(w),0,System.Windows.Input.Key.Enter){RoutedEvent=System.Windows.Input.Keyboard.PreviewKeyDownEvent};w.TitleBox.RaiseEvent(enter);
   Check("Enter confirms and persists title and transfers focus to note body",enter.Handled&&w.Editor.IsKeyboardFocusWithin&&!w.TitleBox.IsKeyboardFocusWithin&&new Store(app.DataRoot).Book.Notes.Single(n=>n.Id==w.Note.Id).Title==w.TitleBox.Text);
   Check("Confirming title adds no newline to title or body",!w.TitleBox.Text.Contains('\n')&&new System.Windows.Documents.TextRange(w.Editor.Document.ContentStart,w.Editor.Document.ContentEnd).Text==text);
