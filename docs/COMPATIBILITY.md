@@ -10,7 +10,7 @@
 
 ## Instalação e atualização
 
-Extraia o ZIP completo da arquitetura correta. O executável portátil funciona diretamente. Os scripts de instalação/desinstalação requerem uma política Windows que permita scripts; não desative proteções para executá-los. A distribuição Store gerenciará instalação/atualização pelo Windows após a certificação.
+Extraia o ZIP completo da arquitetura correta. O executável portátil funciona diretamente. Os scripts de instalação/desinstalação requerem uma política Windows que permita scripts; não desative proteções para executá-los. A distribuição Store gerencia instalação e atualizações oficiais pelo Windows. Cada atualização precisa concluir sua própria certificação.
 
 O instalador verifica arquivos, arquitetura, atalhos e registros antes de substituir o app. Prepara uma pasta temporária, verifica as cópias e guarda a versão anterior fora da pasta ativa de programas. Em falha de ativação restaura a instalação e os atalhos anteriores. Preserva a opção de início automático durante atualização. Backups intencionais ficam em `%LOCALAPPDATA%\Bruno\WindowsStickyNotes-backups`.
 
@@ -38,6 +38,6 @@ Cada nova versão precisa de certificação própria antes de ser considerada di
 
 ### Revisão isolada de layouts
 
-`tools/LayoutReview` compila os controles reais da fonte atual em um executável de QA, sem ícone de bandeja, conta conectada ou alterações de escala/resolução. A CI verifica 33 cenários: cinco abas, dois temas, painéis de 360×400, 360×320 e 300×320 DIP, além da confirmação de exclusão em três larguras, com título longo e Cancelar como padrão. O relatório pertence ao commit da execução; não é uma inspeção da instalação distribuída nem teste físico de teclado, mouse ou leitor de tela.
+`tools/LayoutReview` compila os controles reais da fonte atual em um executável de QA, sem ícone de bandeja, conta conectada ou alterações de escala/resolução. O CI verifica 26 cenários: primeira abertura nativa, três seções em dois temas e painéis de 360×460, 300×460 e 300×320 DIP, além das confirmações Google e de exclusão em três larguras. Cancelar é o padrão seguro. O relatório pertence ao commit da execução; não é uma inspeção da instalação distribuída nem teste físico de teclado, mouse ou leitor de tela.
 
-O caso de 300 DIP é um teste de estresse: o Viewbox pode reduzir textos abaixo de 10 DIP. Isso não comprova legibilidade em telas extremas. A revisão visual nativa e a acessibilidade da instalação continuam exigindo evidência separada.
+O caso de 300×320 DIP é um teste de estresse com rolagem acessível. Não há Viewbox reduzindo as fontes. A revisão visual nativa e a acessibilidade da instalação continuam exigindo evidência separada.
